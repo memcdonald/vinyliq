@@ -32,7 +32,7 @@ class DiscogsClient {
 
   private get consumerKey(): string {
     if (!this._consumerKey) {
-      const key = process.env.DISCOGS_CONSUMER_KEY;
+      const key = process.env.DISCOGS_CONSUMER_KEY?.trim();
       if (!key) {
         throw new Error(
           'DISCOGS_CONSUMER_KEY is not set. Please add it to your environment variables.',
@@ -45,7 +45,7 @@ class DiscogsClient {
 
   private get consumerSecret(): string {
     if (!this._consumerSecret) {
-      const secret = process.env.DISCOGS_CONSUMER_SECRET;
+      const secret = process.env.DISCOGS_CONSUMER_SECRET?.trim();
       if (!secret) {
         throw new Error(
           'DISCOGS_CONSUMER_SECRET is not set. Please add it to your environment variables.',
