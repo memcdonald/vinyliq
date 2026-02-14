@@ -28,15 +28,21 @@ export default function SignInPage() {
     setLoading(true);
 
     try {
-      const result = await signIn.email({ email, password });
-      if (result.error) {
-        setError(result.error.message ?? "Sign in failed");
-      } else {
+      const { data, error: signInError } = await signIn.email({
+        email,
+        password,
+        callbackURL: "/search",
+      });
+      if (signInError) {
+        setError(signInError.message ?? signInError.statusText ?? `Sign in failed (${signInError.status})`);
+      } else if (data) {
         router.push("/search");
         router.refresh();
+      } else {
+        setError("Sign in returned no data");
       }
-    } catch {
-      setError("An unexpected error occurred");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unexpected error occurred");
     } finally {
       setLoading(false);
     }

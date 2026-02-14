@@ -29,12 +29,19 @@ export default function SignUpPage() {
     setLoading(true);
 
     try {
-      const result = await signUp.email({ name, email, password });
-      if (result.error) {
-        setError(result.error.message ?? result.error.statusText ?? `Sign up failed (${result.error.status})`);
-      } else {
+      const { data, error: signUpError } = await signUp.email({
+        name,
+        email,
+        password,
+        callbackURL: "/search",
+      });
+      if (signUpError) {
+        setError(signUpError.message ?? signUpError.statusText ?? `Sign up failed (${signUpError.status})`);
+      } else if (data) {
         router.push("/search");
         router.refresh();
+      } else {
+        setError("Sign up returned no data");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred");
