@@ -39,7 +39,7 @@ export function AlbumCard({
 
   return (
     <Link href={href} className="group block">
-      <Card className="h-full overflow-hidden py-0 transition-shadow hover:shadow-md">
+      <Card className="h-full overflow-hidden py-0 hover:-translate-y-0.5 transition-all duration-250">
         <div className="relative aspect-square w-full overflow-hidden bg-muted">
           {thumb ? (
             <Image
@@ -47,7 +47,7 @@ export function AlbumCard({
               alt={title}
               fill
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              className="object-cover transition-transform group-hover:scale-105"
+              className="object-cover"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-muted">

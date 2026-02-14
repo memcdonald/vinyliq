@@ -51,7 +51,7 @@ export default function SignInPage() {
   return (
     <Card>
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl font-bold">VinylIQ</CardTitle>
+        <CardTitle className="text-2xl font-bold font-serif-display">VinylIQ</CardTitle>
         <CardDescription>Sign in to your account</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>

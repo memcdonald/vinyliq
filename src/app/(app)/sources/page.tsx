@@ -36,7 +36,7 @@ export default function SourcesPage() {
         <div className="flex items-center gap-3">
           <Globe className="h-6 w-6 text-muted-foreground" />
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Data Sources</h1>
+            <h1 className="text-2xl font-bold tracking-tight font-sans-display">Data Sources</h1>
             {!isLoading && (
               <p className="text-sm text-muted-foreground">
                 {sources?.length ?? 0}{" "}

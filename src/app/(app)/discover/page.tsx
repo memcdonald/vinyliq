@@ -100,7 +100,7 @@ export default function DiscoverPage() {
       <div className="mx-auto max-w-6xl space-y-8 p-6 md:p-10">
         <div className="flex items-center gap-3">
           <Compass className="size-7 text-muted-foreground" />
-          <h1 className="text-3xl font-bold tracking-tight">Discover</h1>
+          <h1 className="text-3xl font-bold tracking-tight font-sans-display">Discover</h1>
         </div>
         {Array.from({ length: 3 }).map((_, groupIdx) => (
           <div key={groupIdx} className="space-y-4">
@@ -161,7 +161,7 @@ export default function DiscoverPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Compass className="size-7 text-muted-foreground" />
-          <h1 className="text-3xl font-bold tracking-tight">Discover</h1>
+          <h1 className="text-3xl font-bold tracking-tight font-sans-display">Discover</h1>
         </div>
         <Button
           variant="outline"

@@ -39,7 +39,7 @@ export default function WantlistPage() {
         <div className="flex items-center gap-3">
           <Heart className="h-6 w-6 text-muted-foreground" />
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Your Wantlist</h1>
+            <h1 className="text-2xl font-bold tracking-tight font-sans-display">Your Wantlist</h1>
             {!isLoading && (
               <p className="text-sm text-muted-foreground">
                 {items.length} {items.length === 1 ? "album" : "albums"}

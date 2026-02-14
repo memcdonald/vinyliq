@@ -109,7 +109,7 @@ export default function ArtistPage({
         {/* Artist info */}
         <div className="space-y-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl font-sans-display">
               {artist.name}
             </h1>
             {artist.realName && (

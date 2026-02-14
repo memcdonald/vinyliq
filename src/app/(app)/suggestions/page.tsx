@@ -26,9 +26,9 @@ function ScoreBadge({ score, label }: { score: number | null; label: string }) {
   const max = label === "taste" ? 100 : 100;
   const color =
     pct >= 70
-      ? "bg-green-500/15 text-green-700 dark:text-green-400"
+      ? "bg-success/15 text-success"
       : pct >= 40
-        ? "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400"
+        ? "bg-acid-halo/15 text-acid-halo"
         : "bg-muted text-muted-foreground";
   return (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${color}`}>
@@ -96,7 +96,7 @@ export default function SuggestionsPage() {
         <div className="flex items-center gap-3">
           <Sparkles className="h-6 w-6 text-muted-foreground" />
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Suggestions</h1>
+            <h1 className="text-2xl font-bold tracking-tight font-sans-display">Suggestions</h1>
             {stats && (
               <p className="text-sm text-muted-foreground">
                 {stats.new} new · {stats.interested} interested ·{" "}

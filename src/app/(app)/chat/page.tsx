@@ -59,7 +59,7 @@ export default function ChatPage() {
         <div className="flex items-center gap-3">
           <MessageCircle className="h-6 w-6 text-muted-foreground" />
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Chat</h1>
+            <h1 className="text-2xl font-bold tracking-tight font-sans-display">Chat</h1>
             <p className="text-sm text-muted-foreground">
               Ask about vinyl, get personalized advice
             </p>

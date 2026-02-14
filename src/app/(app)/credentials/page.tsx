@@ -70,7 +70,7 @@ export default function CredentialsPage() {
       <div className="flex items-center gap-3">
         <KeyRound className="h-6 w-6 text-muted-foreground" />
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Credentials</h1>
+          <h1 className="text-2xl font-bold tracking-tight font-sans-display">Credentials</h1>
           <p className="text-sm text-muted-foreground">
             API keys and service connections
           </p>

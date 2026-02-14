@@ -56,7 +56,7 @@ function CollectionStats() {
         </Card>
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <Heart className="h-8 w-8 text-red-500 shrink-0" />
+            <Heart className="h-8 w-8 text-wine-rose shrink-0" />
             <div>
               <p className="text-2xl font-bold">{stats.wanted}</p>
               <p className="text-xs text-muted-foreground">Wanted</p>
@@ -65,7 +65,7 @@ function CollectionStats() {
         </Card>
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <Headphones className="h-8 w-8 text-blue-500 shrink-0" />
+            <Headphones className="h-8 w-8 text-primary shrink-0" />
             <div>
               <p className="text-2xl font-bold">{stats.listened}</p>
               <p className="text-xs text-muted-foreground">Listened</p>
@@ -74,7 +74,7 @@ function CollectionStats() {
         </Card>
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <Star className="h-8 w-8 text-yellow-500 shrink-0" />
+            <Star className="h-8 w-8 text-acid-halo shrink-0" />
             <div>
               <p className="text-2xl font-bold">
                 {stats.avgRating !== null ? stats.avgRating.toFixed(1) : '—'}
@@ -164,7 +164,7 @@ export default function CollectionPage() {
         <div className="flex items-center gap-3">
           <Library className="h-6 w-6 text-muted-foreground" />
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">
+            <h1 className="text-2xl font-bold tracking-tight font-sans-display">
               Your Collection
             </h1>
             {!isLoading && (
@@ -250,7 +250,7 @@ export default function CollectionPage() {
                             key={i}
                             className={`h-3 w-3 ${
                               i < item.rating!
-                                ? "fill-yellow-400 text-yellow-400"
+                                ? "fill-acid-halo text-acid-halo"
                                 : "text-muted-foreground/30"
                             }`}
                           />

@@ -9,16 +9,16 @@ interface RatingInputProps {
 }
 
 const SEGMENT_COLORS = [
-  "bg-red-500",       // 1
-  "bg-red-400",       // 2
-  "bg-orange-500",    // 3
-  "bg-orange-400",    // 4
-  "bg-yellow-500",    // 5
-  "bg-yellow-400",    // 6
-  "bg-lime-500",      // 7
-  "bg-green-400",     // 8
-  "bg-green-500",     // 9
-  "bg-emerald-500",   // 10
+  "bg-destructive",      // 1
+  "bg-destructive",      // 2
+  "bg-wine-rose",        // 3
+  "bg-wine-rose",        // 4
+  "bg-primary",          // 5
+  "bg-primary",          // 6
+  "bg-primary",          // 7
+  "bg-success",          // 8
+  "bg-success",          // 9
+  "bg-success",          // 10
 ] as const;
 
 export function RatingInput({ value, onChange, disabled }: RatingInputProps) {

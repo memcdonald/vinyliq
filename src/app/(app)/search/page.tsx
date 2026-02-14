@@ -50,7 +50,7 @@ function SearchPageContent() {
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Search header */}
       <div className="mb-8">
-        <h1 className="mb-4 text-3xl font-bold tracking-tight">
+        <h1 className="mb-4 text-3xl font-bold tracking-tight font-sans-display">
           Search Records
         </h1>
         <form onSubmit={handleSubmit} className="flex gap-2">

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   Search,
   Library,
@@ -10,7 +11,6 @@ import {
   Settings,
   LogOut,
   User,
-  Disc3,
   Menu,
   CalendarClock,
   Globe,
@@ -99,8 +99,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Desktop sidebar */}
       <aside className="hidden md:flex md:w-60 md:flex-col md:border-r md:bg-sidebar">
         <div className="flex h-14 items-center gap-2 px-4">
-          <Disc3 className="size-6 text-primary" />
-          <span className="text-lg font-bold tracking-tight">VinylIQ</span>
+          <Image src="/mark.svg" alt="VinylIQ" width={24} height={24} className="drop-shadow-[0_0_12px_rgba(124,92,255,0.5)]" />
+          <span className="text-lg font-bold tracking-tight font-serif-display">VinylIQ</span>
         </div>
         <Separator />
         <nav className="flex flex-1 flex-col p-3">
@@ -113,7 +113,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-250",
                     isActive
                       ? "bg-sidebar-accent text-sidebar-accent-foreground"
                       : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
@@ -138,7 +138,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-250",
                     isActive
                       ? "bg-sidebar-accent text-sidebar-accent-foreground"
                       : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
@@ -204,8 +204,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Mobile header */}
       <header className="flex h-14 items-center justify-between border-b bg-background px-4 md:hidden">
         <div className="flex items-center gap-2">
-          <Disc3 className="size-5 text-primary" />
-          <span className="text-lg font-bold tracking-tight">VinylIQ</span>
+          <Image src="/mark.svg" alt="VinylIQ" width={20} height={20} className="drop-shadow-[0_0_12px_rgba(124,92,255,0.5)]" />
+          <span className="text-lg font-bold tracking-tight font-serif-display">VinylIQ</span>
         </div>
         <Sheet>
           <SheetTrigger asChild>
@@ -216,8 +216,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </SheetTrigger>
           <SheetContent side="right" className="w-64">
             <SheetHeader>
-              <SheetTitle className="flex items-center gap-2">
-                <Disc3 className="size-5 text-primary" />
+              <SheetTitle className="flex items-center gap-2 font-serif-display">
+                <Image src="/mark.svg" alt="VinylIQ" width={20} height={20} className="drop-shadow-[0_0_12px_rgba(124,92,255,0.5)]" />
                 VinylIQ
               </SheetTitle>
             </SheetHeader>
@@ -232,7 +232,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       key={item.href}
                       href={item.href}
                       className={cn(
-                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-250",
                         isActive
                           ? "bg-accent text-accent-foreground"
                           : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
@@ -258,7 +258,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       key={item.href}
                       href={item.href}
                       className={cn(
-                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-250",
                         isActive
                           ? "bg-accent text-accent-foreground"
                           : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"

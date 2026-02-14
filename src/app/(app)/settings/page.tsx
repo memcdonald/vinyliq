@@ -123,7 +123,7 @@ function SettingsContent() {
       {/* Page Header */}
       <div className="flex items-center gap-3">
         <Settings className="size-7 text-muted-foreground" />
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+        <h1 className="text-3xl font-bold tracking-tight font-sans-display">Settings</h1>
       </div>
 
       {/* Profile Section */}

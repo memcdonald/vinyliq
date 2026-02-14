@@ -1,5 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
-import { Disc3, Search, Library, Heart, Compass } from "lucide-react";
+import { Search, Library, Heart, Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function HomePage() {
@@ -7,8 +8,14 @@ export default function HomePage() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
       <div className="mx-auto flex max-w-lg flex-col items-center gap-8 text-center">
         <div className="flex items-center gap-3">
-          <Disc3 className="size-10 text-primary" />
-          <h1 className="text-4xl font-bold tracking-tight">VinylIQ</h1>
+          <Image
+            src="/mark.svg"
+            alt="VinylIQ"
+            width={48}
+            height={48}
+            className="drop-shadow-[0_0_12px_rgba(124,92,255,0.5)]"
+          />
+          <h1 className="text-5xl font-bold tracking-tight font-serif-display">VinylIQ</h1>
         </div>
 
         <p className="text-lg text-muted-foreground">

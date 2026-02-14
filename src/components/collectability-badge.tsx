@@ -16,13 +16,13 @@ export function CollectabilityBadge({ score, size = "sm" }: CollectabilityBadgeP
   let label: string;
 
   if (rounded >= 70) {
-    colorClass = "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
+    colorClass = "bg-success/15 text-success";
     label = "High";
   } else if (rounded >= 40) {
-    colorClass = "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400";
+    colorClass = "bg-acid-halo/15 text-acid-halo";
     label = "Medium";
   } else {
-    colorClass = "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
+    colorClass = "bg-destructive/15 text-destructive";
     label = "Low";
   }
 
