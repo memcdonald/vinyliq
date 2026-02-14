@@ -26,6 +26,44 @@ import {
 
 export const settingsRouter = createTRPCRouter({
   // -------------------------------------------------------------------------
+  // Credentials status (which API keys / services are configured)
+  // -------------------------------------------------------------------------
+  getCredentialsStatus: protectedProcedure.query(async ({ ctx }) => {
+    const [row] = await db
+      .select({
+        discogsAccessToken: user.discogsAccessToken,
+        discogsUsername: user.discogsUsername,
+        spotifyAccessToken: user.spotifyAccessToken,
+      })
+      .from(user)
+      .where(eq(user.id, ctx.userId));
+
+    return {
+      discogs: {
+        consumerKey: !!process.env.DISCOGS_CONSUMER_KEY,
+        connected: !!row?.discogsAccessToken,
+        username: row?.discogsUsername ?? null,
+      },
+      spotify: {
+        clientId: !!process.env.SPOTIFY_CLIENT_ID,
+        connected: !!row?.spotifyAccessToken,
+      },
+      ai: {
+        anthropic: !!process.env.ANTHROPIC_API_KEY,
+        openai: !!process.env.OPENAI_API_KEY,
+        provider: process.env.AI_PROVIDER ?? "claude",
+      },
+      cache: {
+        redis: !!process.env.UPSTASH_REDIS_REST_URL,
+      },
+      auth: {
+        secret: !!process.env.BETTER_AUTH_SECRET,
+        url: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
+      },
+    };
+  }),
+
+  // -------------------------------------------------------------------------
   // Connected accounts status
   // -------------------------------------------------------------------------
   getConnectedAccounts: protectedProcedure.query(async ({ ctx }) => {

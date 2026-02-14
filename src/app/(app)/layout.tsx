@@ -14,6 +14,9 @@ import {
   Menu,
   CalendarClock,
   Globe,
+  Sparkles,
+  MessageCircle,
+  KeyRound,
 } from "lucide-react";
 import { signOut, useSession } from "@/server/auth/client";
 import { Button } from "@/components/ui/button";
@@ -36,13 +39,30 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
-const navItems = [
+const appNavItems = [
   { href: "/search", label: "Search", icon: Search },
   { href: "/collection", label: "Collection", icon: Library },
   { href: "/wantlist", label: "Wantlist", icon: Heart },
   { href: "/releases", label: "Releases", icon: CalendarClock },
-  { href: "/sources", label: "Sources", icon: Globe },
   { href: "/discover", label: "Discover", icon: Compass },
+  { href: "/suggestions", label: "Suggestions", icon: Sparkles },
+  { href: "/chat", label: "Chat", icon: MessageCircle },
+];
+
+const opsNavItems = [
+  { href: "/sources", label: "Sources", icon: Globe },
+  { href: "/credentials", label: "Credentials", icon: KeyRound },
+  { href: "/settings", label: "Settings", icon: Settings },
+];
+
+const allNavItems = [...appNavItems, ...opsNavItems];
+
+// Subset for mobile bottom bar (limited space)
+const mobileNavItems = [
+  { href: "/search", label: "Search", icon: Search },
+  { href: "/collection", label: "Collection", icon: Library },
+  { href: "/suggestions", label: "Suggestions", icon: Sparkles },
+  { href: "/chat", label: "Chat", icon: MessageCircle },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -83,26 +103,53 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <span className="text-lg font-bold tracking-tight">VinylIQ</span>
         </div>
         <Separator />
-        <nav className="flex flex-1 flex-col gap-1 p-3">
-          {navItems.map((item) => {
-            const isActive =
-              pathname === item.href || pathname.startsWith(item.href + "/");
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-                )}
-              >
-                <item.icon className="size-4" />
-                {item.label}
-              </Link>
-            );
-          })}
+        <nav className="flex flex-1 flex-col p-3">
+          <div className="flex flex-col gap-1">
+            {appNavItems.map((item) => {
+              const isActive =
+                pathname === item.href || pathname.startsWith(item.href + "/");
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                  )}
+                >
+                  <item.icon className="size-4" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+          <Separator className="my-3" />
+          <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
+            Operations
+          </p>
+          <div className="flex flex-col gap-1">
+            {opsNavItems.map((item) => {
+              const isActive =
+                pathname === item.href || pathname.startsWith(item.href + "/");
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                  )}
+                >
+                  <item.icon className="size-4" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
         </nav>
         <Separator />
         <div className="p-3">
@@ -174,27 +221,55 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 VinylIQ
               </SheetTitle>
             </SheetHeader>
-            <nav className="flex flex-col gap-1 px-2">
-              {navItems.map((item) => {
-                const isActive =
-                  pathname === item.href ||
-                  pathname.startsWith(item.href + "/");
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                      isActive
-                        ? "bg-accent text-accent-foreground"
-                        : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
-                    )}
-                  >
-                    <item.icon className="size-4" />
-                    {item.label}
-                  </Link>
-                );
-              })}
+            <nav className="flex flex-col px-2">
+              <div className="flex flex-col gap-1">
+                {appNavItems.map((item) => {
+                  const isActive =
+                    pathname === item.href ||
+                    pathname.startsWith(item.href + "/");
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={cn(
+                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                        isActive
+                          ? "bg-accent text-accent-foreground"
+                          : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                      )}
+                    >
+                      <item.icon className="size-4" />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+              <Separator className="my-2" />
+              <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">
+                Operations
+              </p>
+              <div className="flex flex-col gap-1">
+                {opsNavItems.map((item) => {
+                  const isActive =
+                    pathname === item.href ||
+                    pathname.startsWith(item.href + "/");
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={cn(
+                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                        isActive
+                          ? "bg-accent text-accent-foreground"
+                          : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                      )}
+                    >
+                      <item.icon className="size-4" />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
             </nav>
             <Separator className="my-2" />
             <div className="px-2">
@@ -235,7 +310,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Mobile bottom tab bar */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-16 items-center justify-around border-t bg-background md:hidden">
-        {navItems.map((item) => {
+        {mobileNavItems.map((item) => {
           const isActive =
             pathname === item.href || pathname.startsWith(item.href + "/");
           return (

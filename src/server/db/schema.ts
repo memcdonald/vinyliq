@@ -531,6 +531,78 @@ export const dataSources = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// ai_suggestions - AI-powered suggestions from probed sources
+// ---------------------------------------------------------------------------
+export const aiSuggestions = pgTable(
+  "ai_suggestions",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    artistName: text("artist_name").notNull(),
+    title: text("title").notNull(),
+    labelName: text("label_name"),
+    releaseDate: timestamp("release_date", { withTimezone: true }),
+    coverImage: text("cover_image"),
+    description: text("description"),
+    orderUrl: text("order_url"),
+    sourceId: uuid("source_id").references(() => dataSources.id),
+    sourceName: text("source_name"),
+    // Scoring
+    collectabilityScore: real("collectability_score"),
+    tasteScore: real("taste_score"),
+    combinedScore: real("combined_score"),
+    // AI explanation
+    aiExplanation: text("ai_explanation"),
+    // Status
+    status: text("status").notNull().default("new"), // 'new' | 'dismissed' | 'interested'
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .default(sql`now()`),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .default(sql`now()`),
+  },
+  (table) => [
+    uniqueIndex("ai_suggestions_user_artist_title_idx").on(
+      table.userId,
+      table.artistName,
+      table.title,
+    ),
+    index("ai_suggestions_user_id_idx").on(table.userId),
+    index("ai_suggestions_combined_score_idx").on(table.combinedScore),
+    index("ai_suggestions_status_idx").on(table.status),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// chat_messages - Multi-turn AI chat history
+// ---------------------------------------------------------------------------
+export const chatMessages = pgTable(
+  "chat_messages",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    role: text("role").notNull(), // 'user' | 'assistant'
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .default(sql`now()`),
+  },
+  (table) => [
+    index("chat_messages_user_id_idx").on(table.userId),
+    index("chat_messages_created_at_idx").on(table.createdAt),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // Inferred types
 // ---------------------------------------------------------------------------
 export type Album = typeof albums.$inferSelect;
@@ -574,3 +646,9 @@ export type NewAiEvaluation = typeof aiEvaluations.$inferInsert;
 
 export type DataSource = typeof dataSources.$inferSelect;
 export type NewDataSource = typeof dataSources.$inferInsert;
+
+export type AiSuggestion = typeof aiSuggestions.$inferSelect;
+export type NewAiSuggestion = typeof aiSuggestions.$inferInsert;
+
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type NewChatMessage = typeof chatMessages.$inferInsert;
