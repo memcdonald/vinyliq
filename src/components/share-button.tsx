@@ -11,7 +11,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { env } from "@/lib/env";
 
 interface ShareButtonProps {
   type: "album" | "wantlist";
@@ -34,7 +33,7 @@ export function ShareButton({ type, albumId, title }: ShareButtonProps) {
 
       const baseUrl = typeof window !== "undefined"
         ? window.location.origin
-        : env.NEXT_PUBLIC_BASE_URL;
+        : process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
       const shareUrl = `${baseUrl}/share/${result.token}`;
 
       // Try native share API first (mobile)
@@ -70,7 +69,7 @@ export function ShareButton({ type, albumId, title }: ShareButtonProps) {
 
       const baseUrl = typeof window !== "undefined"
         ? window.location.origin
-        : env.NEXT_PUBLIC_BASE_URL;
+        : process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
       const shareUrl = `${baseUrl}/share/${result.token}`;
 
       await navigator.clipboard.writeText(shareUrl);
@@ -92,7 +91,7 @@ export function ShareButton({ type, albumId, title }: ShareButtonProps) {
 
       const baseUrl = typeof window !== "undefined"
         ? window.location.origin
-        : env.NEXT_PUBLIC_BASE_URL;
+        : process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
       const shareUrl = `${baseUrl}/share/${result.token}`;
 
       const subject = encodeURIComponent(`Check out ${title} on VinylIQ`);

@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Library, Star, Search, BarChart3, Disc3, Heart, Headphones } from "lucide-react";
+import { Library, Star, Search, BarChart3, Disc3, Heart, Headphones, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -155,6 +156,18 @@ export default function CollectionPage() {
   const { data, isLoading } = trpc.collection.getAll.useQuery({
     status: "owned",
   });
+  const utils = trpc.useUtils();
+
+  const removeMutation = trpc.collection.remove.useMutation({
+    onSuccess: () => {
+      toast.success("Removed from collection");
+      utils.collection.getAll.invalidate();
+      utils.collection.stats.invalidate();
+    },
+    onError: (error) => {
+      toast.error("Failed to remove", { description: error.message });
+    },
+  });
 
   const items = data?.items ?? [];
 
@@ -207,7 +220,8 @@ export default function CollectionPage() {
                 : "#";
 
             return (
-              <Link key={item.id} href={href} className="group block">
+              <div key={item.id} className="group relative">
+                <Link href={href} className="block">
                 <Card className="h-full overflow-hidden py-0 transition-shadow hover:shadow-md">
                   <div className="relative aspect-square w-full overflow-hidden bg-muted">
                     {item.thumb || item.coverImage ? (
@@ -272,7 +286,22 @@ export default function CollectionPage() {
                     )}
                   </CardContent>
                 </Card>
-              </Link>
+                </Link>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 hover:bg-destructive hover:text-white"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    removeMutation.mutate({ id: item.id });
+                  }}
+                  disabled={removeMutation.isPending}
+                >
+                  <Trash2 className="h-3 w-3" />
+                  <span className="sr-only">Remove</span>
+                </Button>
+              </div>
             );
           })}
         </div>

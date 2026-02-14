@@ -14,11 +14,11 @@ interface AiEvaluationProps {
 function ScoreBadge({ score }: { score: number }) {
   let colorClass: string;
   if (score >= 8) {
-    colorClass = "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
+    colorClass = "bg-success/15 text-success";
   } else if (score >= 5) {
-    colorClass = "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400";
+    colorClass = "bg-acid-halo/15 text-acid-halo";
   } else {
-    colorClass = "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
+    colorClass = "bg-destructive/15 text-destructive";
   }
 
   return (
@@ -133,7 +133,7 @@ export function AiEvaluation({ albumId }: AiEvaluationProps) {
           <div className="space-y-1.5">
             {data.highlights.map((highlight, i) => (
               <div key={i} className="flex items-start gap-2 text-sm">
-                <CheckCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-green-600 dark:text-green-400" />
+                <CheckCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" />
                 <span>{highlight}</span>
               </div>
             ))}
@@ -144,7 +144,7 @@ export function AiEvaluation({ albumId }: AiEvaluationProps) {
           <div className="space-y-1.5">
             {data.concerns.map((concern, i) => (
               <div key={i} className="flex items-start gap-2 text-sm">
-                <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-wine-rose" />
                 <span>{concern}</span>
               </div>
             ))}

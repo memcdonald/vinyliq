@@ -10,8 +10,13 @@ import {
   Bot,
   Database,
   Shield,
+  LinkIcon,
+  Unlink,
+  Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -25,7 +30,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 function StatusIndicator({ configured }: { configured: boolean }) {
   return configured ? (
-    <div className="flex items-center gap-1.5 text-sm text-green-600 dark:text-green-400">
+    <div className="flex items-center gap-1.5 text-sm text-success">
       <CheckCircle2 className="h-4 w-4" />
       <span>Configured</span>
     </div>
@@ -62,6 +67,160 @@ function CredentialRow({
   );
 }
 
+function DiscogsConnection({
+  connected,
+  username,
+  hasConsumerKey,
+}: {
+  connected: boolean;
+  username: string | null;
+  hasConsumerKey: boolean;
+}) {
+  const utils = trpc.useUtils();
+
+  const { refetch: fetchAuthUrl, isFetching: isConnecting } =
+    trpc.settings.getDiscogsAuthUrl.useQuery(undefined, {
+      enabled: false,
+    });
+
+  const disconnectMutation = trpc.settings.disconnectDiscogs.useMutation({
+    onSuccess: () => {
+      toast.success("Discogs disconnected");
+      utils.settings.getCredentialsStatus.invalidate();
+      utils.settings.getConnectedAccounts.invalidate();
+    },
+    onError: (error) => {
+      toast.error("Failed to disconnect", { description: error.message });
+    },
+  });
+
+  async function handleConnect() {
+    try {
+      const result = await fetchAuthUrl();
+      if (result.data?.url) {
+        window.location.href = result.data.url;
+      }
+    } catch {
+      toast.error("Failed to start Discogs auth");
+    }
+  }
+
+  if (!hasConsumerKey) return null;
+
+  if (connected) {
+    return (
+      <div className="flex items-center gap-2 pt-1">
+        <Badge variant="secondary" className="text-[10px]">
+          Connected{username ? `: ${username}` : ""}
+        </Badge>
+        <Button
+          variant="ghost"
+          size="xs"
+          className="text-muted-foreground hover:text-destructive"
+          onClick={() => disconnectMutation.mutate()}
+          disabled={disconnectMutation.isPending}
+        >
+          <Unlink className="h-3 w-3 mr-1" />
+          Disconnect
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <Button
+      variant="outline"
+      size="xs"
+      className="mt-1"
+      onClick={handleConnect}
+      disabled={isConnecting}
+    >
+      {isConnecting ? (
+        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+      ) : (
+        <LinkIcon className="h-3 w-3 mr-1" />
+      )}
+      Connect Discogs
+    </Button>
+  );
+}
+
+function SpotifyConnection({
+  connected,
+  hasClientId,
+}: {
+  connected: boolean;
+  hasClientId: boolean;
+}) {
+  const utils = trpc.useUtils();
+
+  const { refetch: fetchAuthUrl, isFetching: isConnecting } =
+    trpc.settings.getSpotifyAuthUrl.useQuery(undefined, {
+      enabled: false,
+    });
+
+  const disconnectMutation = trpc.settings.disconnectSpotify.useMutation({
+    onSuccess: () => {
+      toast.success("Spotify disconnected");
+      utils.settings.getCredentialsStatus.invalidate();
+      utils.settings.getConnectedAccounts.invalidate();
+    },
+    onError: (error) => {
+      toast.error("Failed to disconnect", { description: error.message });
+    },
+  });
+
+  async function handleConnect() {
+    try {
+      const result = await fetchAuthUrl();
+      if (result.data?.url) {
+        window.location.href = result.data.url;
+      }
+    } catch {
+      toast.error("Failed to start Spotify auth");
+    }
+  }
+
+  if (!hasClientId) return null;
+
+  if (connected) {
+    return (
+      <div className="flex items-center gap-2 pt-1">
+        <Badge variant="secondary" className="text-[10px]">
+          Connected
+        </Badge>
+        <Button
+          variant="ghost"
+          size="xs"
+          className="text-muted-foreground hover:text-destructive"
+          onClick={() => disconnectMutation.mutate()}
+          disabled={disconnectMutation.isPending}
+        >
+          <Unlink className="h-3 w-3 mr-1" />
+          Disconnect
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <Button
+      variant="outline"
+      size="xs"
+      className="mt-1"
+      onClick={handleConnect}
+      disabled={isConnecting}
+    >
+      {isConnecting ? (
+        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+      ) : (
+        <LinkIcon className="h-3 w-3 mr-1" />
+      )}
+      Connect Spotify
+    </Button>
+  );
+}
+
 export default function CredentialsPage() {
   const { data: status, isLoading } = trpc.settings.getCredentialsStatus.useQuery();
 
@@ -85,6 +244,49 @@ export default function CredentialsPage() {
         </div>
       ) : status ? (
         <>
+          {/* Music Services */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Disc3 className="h-5 w-5 text-muted-foreground" />
+                <CardTitle>Music Services</CardTitle>
+              </div>
+              <CardDescription>
+                Collection import and music data
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-1">
+              <div className="py-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">Discogs</p>
+                    <p className="font-mono text-xs text-muted-foreground">DISCOGS_CONSUMER_KEY</p>
+                  </div>
+                  <StatusIndicator configured={status.discogs.consumerKey} />
+                </div>
+                <DiscogsConnection
+                  connected={status.discogs.connected}
+                  username={status.discogs.username ?? null}
+                  hasConsumerKey={status.discogs.consumerKey}
+                />
+              </div>
+              <Separator />
+              <div className="py-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">Spotify</p>
+                    <p className="font-mono text-xs text-muted-foreground">SPOTIFY_CLIENT_ID</p>
+                  </div>
+                  <StatusIndicator configured={status.spotify.clientId} />
+                </div>
+                <SpotifyConnection
+                  connected={status.spotify.connected}
+                  hasClientId={status.spotify.clientId}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
           {/* AI Services */}
           <Card>
             <CardHeader>
@@ -132,46 +334,6 @@ export default function CredentialsPage() {
                 </div>
                 <Badge variant="outline">{status.ai.provider}</Badge>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Music Services */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Disc3 className="h-5 w-5 text-muted-foreground" />
-                <CardTitle>Music Services</CardTitle>
-              </div>
-              <CardDescription>
-                Collection import and music data
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-1">
-              <CredentialRow
-                label="Discogs Consumer Key"
-                envVar="DISCOGS_CONSUMER_KEY"
-                configured={status.discogs.consumerKey}
-                extra={
-                  status.discogs.connected ? (
-                    <Badge variant="secondary" className="text-[10px]">
-                      Connected{status.discogs.username ? `: ${status.discogs.username}` : ""}
-                    </Badge>
-                  ) : null
-                }
-              />
-              <Separator />
-              <CredentialRow
-                label="Spotify Client ID"
-                envVar="SPOTIFY_CLIENT_ID"
-                configured={status.spotify.clientId}
-                extra={
-                  status.spotify.connected ? (
-                    <Badge variant="secondary" className="text-[10px]">
-                      Connected
-                    </Badge>
-                  ) : null
-                }
-              />
             </CardContent>
           </Card>
 
@@ -225,8 +387,8 @@ export default function CredentialsPage() {
 
           {/* Help text */}
           <p className="text-center text-xs text-muted-foreground">
-            Environment variables are set in your deployment platform
-            (Vercel, .env file, etc.) and cannot be edited from this page.
+            API keys are set via environment variables in your deployment platform.
+            Service accounts (Discogs, Spotify) can be connected above.
           </p>
         </>
       ) : null}
