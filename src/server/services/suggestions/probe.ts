@@ -10,6 +10,7 @@ import { UrlAdapter } from "@/server/services/releases/url-adapter";
 import { computeCollectability } from "@/server/services/releases/collectability";
 import { scoreTasteMatch } from "./taste-match";
 import { batchExplain } from "./ai-explain";
+import { filterToAlbums } from "./validate";
 
 const rssAdapter = new RssAdapter();
 const urlAdapter = new UrlAdapter();
@@ -48,6 +49,12 @@ async function probeSource(
     return { sourceName: source.sourceName, discovered: 0, explained: 0 };
   }
 
+  if (rawReleases.length === 0) {
+    return { sourceName: source.sourceName, discovered: 0, explained: 0 };
+  }
+
+  // Filter to actual album releases (heuristic + AI validation)
+  rawReleases = await filterToAlbums(rawReleases);
   if (rawReleases.length === 0) {
     return { sourceName: source.sourceName, discovered: 0, explained: 0 };
   }

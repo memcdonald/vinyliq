@@ -29,7 +29,7 @@ function extractReleasesFromHtml(html: string, baseUrl: string): RawRelease[] {
   for (const match of jsonLdMatches) {
     try {
       const data = JSON.parse(match[1]);
-      if (data["@type"] === "MusicAlbum" || data["@type"] === "Product") {
+      if (data["@type"] === "MusicAlbum") {
         releases.push({
           title: data.name || "",
           artistName: data.byArtist?.name || data.brand?.name || "Unknown Artist",
