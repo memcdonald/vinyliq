@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Search, Library, Heart, Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,7 @@ export default function HomePage() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
       <div className="mx-auto flex max-w-lg flex-col items-center gap-8 text-center">
         <div className="flex items-center gap-3">
-          <Image
+          <img
             src="/mark.png"
             alt="VinylIQ"
             width={48}
