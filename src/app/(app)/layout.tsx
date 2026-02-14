@@ -99,7 +99,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Desktop sidebar */}
       <aside className="hidden md:flex md:w-60 md:flex-col md:border-r md:bg-sidebar">
         <div className="flex h-14 items-center gap-2 px-4">
-          <Image src="/mark.svg" alt="VinylIQ" width={24} height={24} className="drop-shadow-[0_0_12px_rgba(124,92,255,0.5)]" />
+          <Image src="/mark.png" alt="VinylIQ" width={24} height={24} className="drop-shadow-[0_0_12px_rgba(124,92,255,0.5)]" />
           <span className="text-lg font-bold tracking-tight font-serif-display">VinylIQ</span>
         </div>
         <Separator />
@@ -204,7 +204,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Mobile header */}
       <header className="flex h-14 items-center justify-between border-b bg-background px-4 md:hidden">
         <div className="flex items-center gap-2">
-          <Image src="/mark.svg" alt="VinylIQ" width={20} height={20} className="drop-shadow-[0_0_12px_rgba(124,92,255,0.5)]" />
+          <Image src="/mark.png" alt="VinylIQ" width={20} height={20} className="drop-shadow-[0_0_12px_rgba(124,92,255,0.5)]" />
           <span className="text-lg font-bold tracking-tight font-serif-display">VinylIQ</span>
         </div>
         <Sheet>
@@ -217,7 +217,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <SheetContent side="right" className="w-64">
             <SheetHeader>
               <SheetTitle className="flex items-center gap-2 font-serif-display">
-                <Image src="/mark.svg" alt="VinylIQ" width={20} height={20} className="drop-shadow-[0_0_12px_rgba(124,92,255,0.5)]" />
+                <Image src="/mark.png" alt="VinylIQ" width={20} height={20} className="drop-shadow-[0_0_12px_rgba(124,92,255,0.5)]" />
                 VinylIQ
               </SheetTitle>
             </SheetHeader>

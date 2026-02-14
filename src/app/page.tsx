@@ -9,7 +9,7 @@ export default function HomePage() {
       <div className="mx-auto flex max-w-lg flex-col items-center gap-8 text-center">
         <div className="flex items-center gap-3">
           <Image
-            src="/mark.svg"
+            src="/mark.png"
             alt="VinylIQ"
             width={48}
             height={48}
