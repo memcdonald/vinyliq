@@ -8,6 +8,7 @@ import { artistRouter } from './artist';
 import { releasesRouter } from './releases';
 import { shareRouter } from './share';
 import { aiRouter } from './ai';
+import { sourcesRouter } from './sources';
 
 export const appRouter = createTRPCRouter({
   album: albumRouter,
@@ -19,6 +20,7 @@ export const appRouter = createTRPCRouter({
   releases: releasesRouter,
   share: shareRouter,
   ai: aiRouter,
+  sources: sourcesRouter,
 });
 
 export type AppRouter = typeof appRouter;

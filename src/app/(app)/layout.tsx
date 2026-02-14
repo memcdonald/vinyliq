@@ -13,6 +13,7 @@ import {
   Disc3,
   Menu,
   CalendarClock,
+  Globe,
 } from "lucide-react";
 import { signOut, useSession } from "@/server/auth/client";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ const navItems = [
   { href: "/collection", label: "Collection", icon: Library },
   { href: "/wantlist", label: "Wantlist", icon: Heart },
   { href: "/releases", label: "Releases", icon: CalendarClock },
+  { href: "/sources", label: "Sources", icon: Globe },
   { href: "/discover", label: "Discover", icon: Compass },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

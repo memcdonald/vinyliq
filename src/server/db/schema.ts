@@ -500,6 +500,37 @@ export const aiEvaluations = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// data_sources - Reference directory of vinyl research websites/services
+// ---------------------------------------------------------------------------
+export const dataSources = pgTable(
+  "data_sources",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    priority: text("priority").notNull(), // 'core' | 'supporting'
+    sourceName: text("source_name").notNull(),
+    url: text("url"),
+    category: text("category"),
+    pulseUse: text("pulse_use"),
+    accessMethod: text("access_method"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .default(sql`now()`),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .default(sql`now()`),
+  },
+  (table) => [
+    index("data_sources_user_id_idx").on(table.userId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // Inferred types
 // ---------------------------------------------------------------------------
 export type Album = typeof albums.$inferSelect;
@@ -540,3 +571,6 @@ export type NewSharedLink = typeof sharedLinks.$inferInsert;
 
 export type AiEvaluation = typeof aiEvaluations.$inferSelect;
 export type NewAiEvaluation = typeof aiEvaluations.$inferInsert;
+
+export type DataSource = typeof dataSources.$inferSelect;
+export type NewDataSource = typeof dataSources.$inferInsert;

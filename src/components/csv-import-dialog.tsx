@@ -18,26 +18,18 @@ import {
 
 type Step = "upload" | "map" | "preview";
 
-const RELEASE_FIELDS = [
-  { key: "title", label: "Title", required: true },
-  { key: "artistName", label: "Artist", required: true },
-  { key: "labelName", label: "Label", required: false },
-  { key: "releaseDate", label: "Release Date", required: false },
-  { key: "orderUrl", label: "Order URL", required: false },
-  { key: "pressRun", label: "Press Run", required: false },
-  { key: "coloredVinyl", label: "Colored Vinyl", required: false },
-  { key: "numbered", label: "Numbered", required: false },
-  { key: "specialPackaging", label: "Special Packaging", required: false },
+const SOURCE_FIELDS = [
+  { key: "priority", label: "Priority", required: true },
+  { key: "sourceName", label: "Source Name", required: true },
+  { key: "url", label: "URL", required: false },
+  { key: "category", label: "Category", required: false },
+  { key: "pulseUse", label: "Pulse Use", required: false },
+  { key: "accessMethod", label: "Access Method", required: false },
+  { key: "notes", label: "Notes", required: false },
 ] as const;
 
-type FieldKey = (typeof RELEASE_FIELDS)[number]["key"];
+type FieldKey = (typeof SOURCE_FIELDS)[number]["key"];
 type ColumnMapping = Partial<Record<FieldKey, string>>;
-
-function parseBool(value: string | undefined): boolean {
-  if (!value) return false;
-  const v = value.trim().toLowerCase();
-  return ["true", "yes", "1", "y", "x"].includes(v);
-}
 
 export function CsvImportDialog() {
   const [open, setOpen] = useState(false);
@@ -47,10 +39,10 @@ export function CsvImportDialog() {
   const [mapping, setMapping] = useState<ColumnMapping>({});
 
   const utils = trpc.useUtils();
-  const bulkMutation = trpc.releases.bulkAddReleases.useMutation({
+  const bulkMutation = trpc.sources.bulkAddSources.useMutation({
     onSuccess: (result) => {
-      toast.success(`Imported ${result.count} releases`);
-      utils.releases.getUpcoming.invalidate();
+      toast.success(`Imported ${result.count} sources`);
+      utils.sources.getAll.invalidate();
       handleClose();
     },
     onError: (error) => {
@@ -84,7 +76,7 @@ export function CsvImportDialog() {
 
           // Auto-map columns by fuzzy-matching header names
           const autoMap: ColumnMapping = {};
-          for (const field of RELEASE_FIELDS) {
+          for (const field of SOURCE_FIELDS) {
             const match = results.meta.fields.find((h) => {
               const normalized = h.toLowerCase().replace(/[_\s-]/g, "");
               const fieldNormalized = field.key.toLowerCase();
@@ -107,40 +99,33 @@ export function CsvImportDialog() {
     [],
   );
 
-  const requiredMapped = RELEASE_FIELDS.filter((f) => f.required).every(
+  const requiredMapped = SOURCE_FIELDS.filter((f) => f.required).every(
     (f) => mapping[f.key],
   );
 
-  function buildReleases() {
-    return csvRows.map((row) => {
-      const pressRunVal = mapping.pressRun ? parseInt(row[mapping.pressRun], 10) : undefined;
-      const releaseDateVal = mapping.releaseDate ? row[mapping.releaseDate] : undefined;
-
-      return {
-        title: row[mapping.title!]?.trim() ?? "",
-        artistName: row[mapping.artistName!]?.trim() ?? "",
-        labelName: mapping.labelName ? row[mapping.labelName]?.trim() || undefined : undefined,
-        releaseDate: releaseDateVal ? new Date(releaseDateVal) : undefined,
-        orderUrl: mapping.orderUrl ? row[mapping.orderUrl]?.trim() || undefined : undefined,
-        pressRun: pressRunVal && !isNaN(pressRunVal) ? pressRunVal : undefined,
-        coloredVinyl: mapping.coloredVinyl ? parseBool(row[mapping.coloredVinyl]) : undefined,
-        numbered: mapping.numbered ? parseBool(row[mapping.numbered]) : undefined,
-        specialPackaging: mapping.specialPackaging
-          ? row[mapping.specialPackaging]?.trim() || undefined
-          : undefined,
-      };
-    }).filter((r) => r.title && r.artistName);
+  function buildSources() {
+    return csvRows
+      .map((row) => ({
+        priority: mapping.priority ? row[mapping.priority]?.trim() ?? "" : "",
+        sourceName: mapping.sourceName ? row[mapping.sourceName]?.trim() ?? "" : "",
+        url: mapping.url ? row[mapping.url]?.trim() || undefined : undefined,
+        category: mapping.category ? row[mapping.category]?.trim() || undefined : undefined,
+        pulseUse: mapping.pulseUse ? row[mapping.pulseUse]?.trim() || undefined : undefined,
+        accessMethod: mapping.accessMethod ? row[mapping.accessMethod]?.trim() || undefined : undefined,
+        notes: mapping.notes ? row[mapping.notes]?.trim() || undefined : undefined,
+      }))
+      .filter((s) => s.priority && s.sourceName);
   }
 
-  const previewReleases = step === "preview" ? buildReleases() : [];
+  const previewSources = step === "preview" ? buildSources() : [];
 
   function handleImport() {
-    const releases = buildReleases();
-    if (releases.length === 0) {
+    const sources = buildSources();
+    if (sources.length === 0) {
       toast.error("No valid rows to import");
       return;
     }
-    bulkMutation.mutate({ releases });
+    bulkMutation.mutate({ sources });
   }
 
   return (
@@ -155,9 +140,9 @@ export function CsvImportDialog() {
         {step === "upload" && (
           <>
             <DialogHeader>
-              <DialogTitle>Import Releases from CSV</DialogTitle>
+              <DialogTitle>Import Sources from CSV</DialogTitle>
               <DialogDescription>
-                Upload a CSV file with your upcoming releases. You&apos;ll map columns in the next step.
+                Upload a CSV file with your data sources. You&apos;ll map columns in the next step.
               </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col items-center gap-4 py-8">
@@ -185,11 +170,11 @@ export function CsvImportDialog() {
             <DialogHeader>
               <DialogTitle>Map Columns</DialogTitle>
               <DialogDescription>
-                Match your CSV columns to release fields. * indicates required fields.
+                Match your CSV columns to source fields. * indicates required fields.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-3 py-2">
-              {RELEASE_FIELDS.map((field) => (
+              {SOURCE_FIELDS.map((field) => (
                 <div key={field.key} className="flex items-center gap-3">
                   <label className="w-36 shrink-0 text-sm font-medium">
                     {field.label}
@@ -240,35 +225,33 @@ export function CsvImportDialog() {
             <DialogHeader>
               <DialogTitle>Preview Import</DialogTitle>
               <DialogDescription>
-                {previewReleases.length} valid releases will be imported.
+                {previewSources.length} valid sources will be imported.
               </DialogDescription>
             </DialogHeader>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left">
-                    <th className="pb-2 pr-4 font-medium">Title</th>
-                    <th className="pb-2 pr-4 font-medium">Artist</th>
-                    <th className="pb-2 pr-4 font-medium">Label</th>
-                    <th className="pb-2 font-medium">Date</th>
+                    <th className="pb-2 pr-4 font-medium">Priority</th>
+                    <th className="pb-2 pr-4 font-medium">Name</th>
+                    <th className="pb-2 pr-4 font-medium">Category</th>
+                    <th className="pb-2 font-medium">URL</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {previewReleases.slice(0, 5).map((r, i) => (
+                  {previewSources.slice(0, 5).map((s, i) => (
                     <tr key={i} className="border-b last:border-0">
-                      <td className="py-1.5 pr-4">{r.title}</td>
-                      <td className="py-1.5 pr-4">{r.artistName}</td>
-                      <td className="py-1.5 pr-4">{r.labelName ?? "—"}</td>
-                      <td className="py-1.5">
-                        {r.releaseDate ? r.releaseDate.toLocaleDateString() : "—"}
-                      </td>
+                      <td className="py-1.5 pr-4">{s.priority}</td>
+                      <td className="py-1.5 pr-4">{s.sourceName}</td>
+                      <td className="py-1.5 pr-4">{s.category ?? "—"}</td>
+                      <td className="py-1.5 max-w-[200px] truncate">{s.url ?? "—"}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              {previewReleases.length > 5 && (
+              {previewSources.length > 5 && (
                 <p className="mt-2 text-xs text-muted-foreground">
-                  ...and {previewReleases.length - 5} more
+                  ...and {previewSources.length - 5} more
                 </p>
               )}
             </div>
@@ -280,11 +263,11 @@ export function CsvImportDialog() {
               <Button
                 size="sm"
                 onClick={handleImport}
-                disabled={bulkMutation.isPending || previewReleases.length === 0}
+                disabled={bulkMutation.isPending || previewSources.length === 0}
               >
                 {bulkMutation.isPending
                   ? "Importing..."
-                  : `Import ${previewReleases.length} Releases`}
+                  : `Import ${previewSources.length} Sources`}
               </Button>
             </DialogFooter>
           </>
