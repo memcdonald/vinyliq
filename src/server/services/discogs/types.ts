@@ -194,3 +194,49 @@ export interface DiscogsMasterVersion {
     community: { in_collection: number; in_wantlist: number };
   };
 }
+
+// ---------------------------------------------------------------------------
+// Collection types
+// ---------------------------------------------------------------------------
+
+export interface DiscogsCollectionFolder {
+  id: number;
+  name: string;
+  count: number;
+  resource_url: string;
+}
+
+export interface DiscogsCollectionFoldersResponse {
+  folders: DiscogsCollectionFolder[];
+}
+
+export interface DiscogsCollectionItem {
+  id: number; // instance_id
+  rating: number;
+  basic_information: {
+    id: number; // release_id
+    master_id: number;
+    master_url: string | null;
+    title: string;
+    year: number;
+    thumb: string;
+    cover_image: string;
+    artists: DiscogsArtistCredit[];
+    labels: DiscogsLabelCredit[];
+    formats: DiscogsFormat[];
+    genres: string[];
+    styles: string[];
+  };
+  date_added: string;
+  notes?: { field_id: number; value: string }[];
+}
+
+export interface DiscogsCollectionItemsResponse {
+  pagination: {
+    page: number;
+    pages: number;
+    per_page: number;
+    items: number;
+  };
+  releases: DiscogsCollectionItem[];
+}

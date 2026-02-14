@@ -5,6 +5,8 @@ import type {
   DiscogsRelease,
   DiscogsArtist,
   DiscogsMasterVersionsResponse,
+  DiscogsCollectionFoldersResponse,
+  DiscogsCollectionItemsResponse,
 } from './types';
 import { cached, CacheTTL, CacheKey } from '@/lib/cache';
 
@@ -135,7 +137,90 @@ class DiscogsClient {
     );
   }
 
+  // ---------- user collection API (OAuth) ----------
+
+  /**
+   * Get a user's collection folders.
+   * Requires OAuth user token.
+   */
+  async getUserCollectionFolders(
+    username: string,
+    accessToken: string,
+    accessTokenSecret: string,
+  ): Promise<DiscogsCollectionFoldersResponse> {
+    return this.authenticatedRequest<DiscogsCollectionFoldersResponse>(
+      `/users/${username}/collection/folders`,
+      accessToken,
+      accessTokenSecret,
+    );
+  }
+
+  /**
+   * Get items from a user's collection folder.
+   * Folder 0 = "All" (everything across all folders).
+   * Requires OAuth user token.
+   */
+  async getUserCollectionItems(
+    username: string,
+    folderId: number,
+    accessToken: string,
+    accessTokenSecret: string,
+    page?: number,
+    perPage?: number,
+  ): Promise<DiscogsCollectionItemsResponse> {
+    const params: Record<string, string> = {};
+    if (page !== undefined) params.page = String(page);
+    if (perPage !== undefined) params.per_page = String(perPage);
+    return this.authenticatedRequest<DiscogsCollectionItemsResponse>(
+      `/users/${username}/collection/folders/${folderId}/releases`,
+      accessToken,
+      accessTokenSecret,
+      params,
+    );
+  }
+
   // ---------- private ----------
+
+  /**
+   * Make a rate-limited request using OAuth 1.0a user tokens.
+   * Uses PLAINTEXT signature method (same as our auth flow).
+   */
+  private async authenticatedRequest<T>(
+    path: string,
+    accessToken: string,
+    accessTokenSecret: string,
+    params?: Record<string, string>,
+  ): Promise<T> {
+    await this.rateLimiter.waitForToken();
+
+    const url = new URL(`${this.baseUrl}${path}`);
+    if (params) {
+      for (const [key, value] of Object.entries(params)) {
+        url.searchParams.set(key, value);
+      }
+    }
+
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    const nonce = Math.random().toString(36).substring(2);
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'User-Agent': this.userAgent,
+        Accept: 'application/vnd.discogs.v2.discogs+json',
+        Authorization: `OAuth oauth_consumer_key="${this.consumerKey}", oauth_token="${accessToken}", oauth_signature_method="PLAINTEXT", oauth_signature="${this.consumerSecret}&${accessTokenSecret}", oauth_timestamp="${timestamp}", oauth_nonce="${nonce}"`,
+      },
+    });
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => '');
+      throw new Error(
+        `Discogs API error: ${response.status} ${response.statusText} — ${path}${body ? ` — ${body}` : ''}`,
+      );
+    }
+
+    return (await response.json()) as T;
+  }
 
   /**
    * Make an authenticated, rate-limited request to the Discogs API.

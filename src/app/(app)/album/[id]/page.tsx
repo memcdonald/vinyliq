@@ -12,6 +12,8 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CollectionActions } from '@/components/collection-actions';
 import { AlbumEnrichment } from '@/components/album-enrichment';
+import { PressingList } from '@/components/pressing-list';
+import { PricingBadge } from '@/components/pricing-badge';
 
 function parseAlbumId(id: string): { type: 'master' | 'release'; discogsId: number } | null {
   const match = id.match(/^(master|release)-(\d+)$/);
@@ -243,9 +245,15 @@ export default function AlbumDetailPage({
             )}
           </div>
 
-          {/* Format */}
+          {/* Format + Marketplace pricing */}
           {formatDescriptions && (
-            <p className="text-sm text-muted-foreground">{formatDescriptions}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm text-muted-foreground">{formatDescriptions}</p>
+              {parsed.type === 'release' && <PricingBadge releaseId={data.id} />}
+            </div>
+          )}
+          {!formatDescriptions && parsed.type === 'release' && (
+            <PricingBadge releaseId={data.id} />
           )}
 
           {/* Genre and style badges */}
@@ -374,6 +382,12 @@ export default function AlbumDetailPage({
           identifiers={data.identifiers}
         />
       )}
+
+      {/* Pressing variants */}
+      <PressingList
+        masterId={data.masterId ?? null}
+        currentReleaseId={data.id}
+      />
     </div>
   );
 }

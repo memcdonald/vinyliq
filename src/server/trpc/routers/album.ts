@@ -4,6 +4,7 @@ import { discogsClient } from "@/server/services/discogs";
 import { db } from "@/server/db";
 import { albums } from "@/server/db/schema";
 import { enrichAlbumFromDiscogs } from "@/server/services/unified";
+import { cached, CacheTTL } from "@/lib/cache";
 
 export const albumRouter = createTRPCRouter({
   getById: publicProcedure
@@ -40,6 +41,7 @@ export const albumRouter = createTRPCRouter({
         return {
           type: "master" as const,
           id: master.id,
+          masterId: master.id,
           title: master.title,
           artists: master.artists.map((a) => ({
             id: a.id,
@@ -84,6 +86,7 @@ export const albumRouter = createTRPCRouter({
       return {
         type: "release" as const,
         id: release.id,
+        masterId: release.master_id ?? null,
         title: release.title,
         artists: release.artists.map((a) => ({
           id: a.id,
@@ -203,5 +206,59 @@ export const albumRouter = createTRPCRouter({
         label: input.label ?? null,
       });
       return result;
+    }),
+
+  getPressings: publicProcedure
+    .input(
+      z.object({
+        masterId: z.number(),
+        page: z.number().optional().default(1),
+      }),
+    )
+    .query(async ({ input }) => {
+      const page = input.page;
+      const data = await cached(
+        `pressings:master:${input.masterId}:${page}`,
+        () => discogsClient.getMasterVersions(input.masterId, page),
+        CacheTTL.MEDIUM,
+      );
+
+      return {
+        pagination: {
+          page: data.pagination.page,
+          pages: data.pagination.pages,
+          perPage: data.pagination.per_page,
+          items: data.pagination.items,
+        },
+        pressings: data.versions.map((v) => ({
+          id: v.id,
+          title: v.title,
+          label: v.label,
+          catno: v.catno,
+          country: v.country,
+          year: v.year,
+          format: v.format,
+          thumb: v.thumb,
+          majorFormats: v.major_formats ?? [],
+          inCollection: v.stats.community.in_collection,
+          inWantlist: v.stats.community.in_wantlist,
+        })),
+      };
+    }),
+
+  getReleasePricing: publicProcedure
+    .input(
+      z.object({
+        releaseId: z.number(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const release = await discogsClient.getRelease(input.releaseId);
+      return {
+        lowestPrice: release.lowest_price ?? null,
+        numForSale: release.num_for_sale ?? 0,
+        communityHave: release.community?.have ?? 0,
+        communityWant: release.community?.want ?? 0,
+      };
     }),
 });
