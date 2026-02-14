@@ -4,8 +4,8 @@ import { Redis } from "@upstash/redis";
 let _redis: Redis | null | undefined;
 function getRedis(): Redis | null {
   if (_redis === undefined) {
-    const url = process.env.UPSTASH_REDIS_REST_URL;
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+    const url = process.env.UPSTASH_REDIS_REST_URL?.trim();
+    const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
     if (url && token) {
       _redis = new Redis({ url, token });
     } else {
