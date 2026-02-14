@@ -14,6 +14,8 @@ import { CollectionActions } from '@/components/collection-actions';
 import { AlbumEnrichment } from '@/components/album-enrichment';
 import { PressingList } from '@/components/pressing-list';
 import { PricingBadge } from '@/components/pricing-badge';
+import { ShareButton } from '@/components/share-button';
+import { AiEvaluation } from '@/components/ai-evaluation';
 
 function parseAlbumId(id: string): { type: 'master' | 'release'; discogsId: number } | null {
   const match = id.match(/^(master|release)-(\d+)$/);
@@ -303,17 +305,26 @@ export default function AlbumDetailPage({
           <Separator />
 
           {/* Collection actions */}
-          <CollectionActions
-            albumId={albumEnsured?.id ?? ''}
-            discogsId={data.id}
-            discogsType={parsed.type}
-            title={data.title}
-            thumb={primaryImage?.uri ?? ''}
-            year={data.year}
-            genres={data.genres}
-            styles={data.styles}
-            coverImage={primaryImage?.uri ?? ''}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <CollectionActions
+              albumId={albumEnsured?.id ?? ''}
+              discogsId={data.id}
+              discogsType={parsed.type}
+              title={data.title}
+              thumb={primaryImage?.uri ?? ''}
+              year={data.year}
+              genres={data.genres}
+              styles={data.styles}
+              coverImage={primaryImage?.uri ?? ''}
+            />
+            {albumEnsured?.id && (
+              <ShareButton
+                type="album"
+                albumId={albumEnsured.id}
+                title={data.title}
+              />
+            )}
+          </div>
         </div>
       </div>
 
@@ -381,6 +392,11 @@ export default function AlbumDetailPage({
           labels={data.labels}
           identifiers={data.identifiers}
         />
+      )}
+
+      {/* AI-powered evaluation */}
+      {albumEnsured?.id && (
+        <AiEvaluation albumId={albumEnsured.id} />
       )}
 
       {/* Pressing variants */}

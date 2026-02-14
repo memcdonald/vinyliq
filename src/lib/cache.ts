@@ -107,4 +107,8 @@ export const CacheKey = {
   spotifyArtist: (id: string) => `spotify:artist:${id}`,
   spotifySearch: (query: string) => `spotify:search:${query}`,
   albumEnriched: (id: string) => `album:enriched:${id}`,
+  upcomingReleases: (userId: string) => `releases:upcoming:${userId}`,
+  sharedLink: (token: string) => `share:link:${token}`,
+  aiEvaluation: (userId: string, albumId: string) => `ai:eval:${userId}:${albumId}`,
+  releaseCollectability: (releaseId: string) => `releases:collectability:${releaseId}`,
 } as const;

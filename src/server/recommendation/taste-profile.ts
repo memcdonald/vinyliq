@@ -18,7 +18,7 @@ export interface TasteProfile {
  *
  * Weights are calculated by frequency + recency + rating boost:
  * - Each album in the collection contributes to genre/style/era/label/artist weights
- * - Albums rated higher get a multiplier (rating/3, so a 5-star = 1.67x, 3-star = 1x)
+ * - Albums rated higher get a multiplier (rating/6, so a 10/10 = 1.67x, 6/10 = 1x)
  * - 'owned' albums get 1.5x weight vs 'wanted' (1.0x) or 'listened' (0.75x)
  * - Weights are normalized to sum to 1.0 per category
  *
@@ -66,7 +66,7 @@ export async function computeTasteProfile(userId: string): Promise<TasteProfile>
 
   for (const item of items) {
     const baseWeight = statusMultiplier[item.status] ?? 1.0;
-    const ratingBoost = item.rating ? item.rating / 3 : 1.0;
+    const ratingBoost = item.rating ? item.rating / 6 : 1.0;
     const weight = baseWeight * ratingBoost;
 
     // Genre weights

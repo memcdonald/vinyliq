@@ -22,4 +22,8 @@ export const env = {
   UPSTASH_REDIS_REST_TOKEN: optional("UPSTASH_REDIS_REST_TOKEN"),
   TOKEN_ENCRYPTION_KEY: optional("TOKEN_ENCRYPTION_KEY"),
   NODE_ENV: optional("NODE_ENV", "development"),
+  ANTHROPIC_API_KEY: optional("ANTHROPIC_API_KEY"),
+  OPENAI_API_KEY: optional("OPENAI_API_KEY"),
+  AI_PROVIDER: optional("AI_PROVIDER", "claude"),
+  NEXT_PUBLIC_BASE_URL: optional("NEXT_PUBLIC_BASE_URL", "http://localhost:3000"),
 } as const;

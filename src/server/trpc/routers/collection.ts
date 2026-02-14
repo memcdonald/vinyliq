@@ -155,7 +155,7 @@ export const collectionRouter = createTRPCRouter({
       z.object({
         id: z.string(),
         status: collectionStatus.optional(),
-        rating: z.number().int().min(1).max(5).optional(),
+        rating: z.number().int().min(1).max(10).optional(),
         notes: z.string().max(1000).optional(),
       }),
     )

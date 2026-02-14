@@ -12,6 +12,7 @@ import {
   User,
   Disc3,
   Menu,
+  CalendarClock,
 } from "lucide-react";
 import { signOut, useSession } from "@/server/auth/client";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,7 @@ const navItems = [
   { href: "/search", label: "Search", icon: Search },
   { href: "/collection", label: "Collection", icon: Library },
   { href: "/wantlist", label: "Wantlist", icon: Heart },
+  { href: "/releases", label: "Releases", icon: CalendarClock },
   { href: "/discover", label: "Discover", icon: Compass },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

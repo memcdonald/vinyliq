@@ -363,6 +363,143 @@ export const recommendations = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// release_sources - User-configured sources for upcoming releases
+// ---------------------------------------------------------------------------
+export const releaseSources = pgTable(
+  "release_sources",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    type: text("type").notNull(), // 'url' | 'rss' | 'manual'
+    name: text("name").notNull(),
+    url: text("url"),
+    enabled: boolean("enabled").notNull().default(true),
+    lastFetchedAt: timestamp("last_fetched_at", { withTimezone: true }),
+    fetchIntervalHours: integer("fetch_interval_hours").notNull().default(24),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .default(sql`now()`),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .default(sql`now()`),
+  },
+  (table) => [
+    index("release_sources_user_id_idx").on(table.userId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// upcoming_releases - Discovered/entered upcoming releases
+// ---------------------------------------------------------------------------
+export const upcomingReleases = pgTable(
+  "upcoming_releases",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    sourceId: uuid("source_id").references(() => releaseSources.id),
+    title: text("title").notNull(),
+    artistName: text("artist_name").notNull(),
+    labelName: text("label_name"),
+    releaseDate: timestamp("release_date", { withTimezone: true }),
+    coverImage: text("cover_image"),
+    description: text("description"),
+    orderUrl: text("order_url"),
+    // Limited edition fields
+    pressRun: integer("press_run"),
+    coloredVinyl: boolean("colored_vinyl").default(false),
+    numbered: boolean("numbered").default(false),
+    specialPackaging: text("special_packaging"),
+    // Scoring
+    collectabilityScore: real("collectability_score"),
+    collectabilityExplanation: text("collectability_explanation"),
+    // Cross-references
+    discogsId: integer("discogs_id"),
+    albumId: uuid("album_id").references(() => albums.id),
+    // Status
+    status: text("status").notNull().default("upcoming"), // 'upcoming' | 'released' | 'archived'
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .default(sql`now()`),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .default(sql`now()`),
+  },
+  (table) => [
+    index("upcoming_releases_user_id_idx").on(table.userId),
+    index("upcoming_releases_source_id_idx").on(table.sourceId),
+    index("upcoming_releases_release_date_idx").on(table.releaseDate),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// shared_links - Public shareable links
+// ---------------------------------------------------------------------------
+export const sharedLinks = pgTable(
+  "shared_links",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    token: text("token").notNull().unique(),
+    type: text("type").notNull(), // 'album' | 'wantlist'
+    albumId: uuid("album_id").references(() => albums.id),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    viewCount: integer("view_count").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .default(sql`now()`),
+  },
+  (table) => [
+    index("shared_links_user_id_idx").on(table.userId),
+    index("shared_links_token_idx").on(table.token),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// ai_evaluations - Cached AI assessments
+// ---------------------------------------------------------------------------
+export const aiEvaluations = pgTable(
+  "ai_evaluations",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    albumId: uuid("album_id")
+      .notNull()
+      .references(() => albums.id),
+    provider: text("provider").notNull(), // 'claude' | 'openai'
+    evaluation: text("evaluation").notNull(),
+    score: real("score").notNull(), // 1-10
+    highlights: jsonb("highlights").default([]),
+    concerns: jsonb("concerns").default([]),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .default(sql`now()`),
+  },
+  (table) => [
+    uniqueIndex("ai_evaluations_user_album_idx").on(
+      table.userId,
+      table.albumId,
+    ),
+    index("ai_evaluations_user_id_idx").on(table.userId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // Inferred types
 // ---------------------------------------------------------------------------
 export type Album = typeof albums.$inferSelect;
@@ -391,3 +528,15 @@ export type NewUserTasteProfile = typeof userTasteProfiles.$inferInsert;
 
 export type Recommendation = typeof recommendations.$inferSelect;
 export type NewRecommendation = typeof recommendations.$inferInsert;
+
+export type ReleaseSource = typeof releaseSources.$inferSelect;
+export type NewReleaseSource = typeof releaseSources.$inferInsert;
+
+export type UpcomingRelease = typeof upcomingReleases.$inferSelect;
+export type NewUpcomingRelease = typeof upcomingReleases.$inferInsert;
+
+export type SharedLink = typeof sharedLinks.$inferSelect;
+export type NewSharedLink = typeof sharedLinks.$inferInsert;
+
+export type AiEvaluation = typeof aiEvaluations.$inferSelect;
+export type NewAiEvaluation = typeof aiEvaluations.$inferInsert;

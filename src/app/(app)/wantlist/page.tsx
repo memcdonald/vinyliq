@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ShareButton } from "@/components/share-button";
 
 function WantlistSkeleton() {
   return (
@@ -46,6 +47,9 @@ export default function WantlistPage() {
             )}
           </div>
         </div>
+        {items.length > 0 && (
+          <ShareButton type="wantlist" title="My Wantlist" />
+        )}
       </div>
 
       {isLoading ? (
