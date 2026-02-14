@@ -6,6 +6,7 @@ import type {
   DiscogsArtist,
   DiscogsMasterVersionsResponse,
 } from './types';
+import { cached, CacheTTL, CacheKey } from '@/lib/cache';
 
 class DiscogsClient {
   private userAgent: string = 'VinylIQ/1.0';
@@ -70,7 +71,11 @@ class DiscogsClient {
     if (params.page !== undefined) queryParams.page = String(params.page);
     if (params.per_page !== undefined) queryParams.per_page = String(params.per_page);
 
-    return this.request<DiscogsSearchResponse>('/database/search', queryParams);
+    return cached(
+      CacheKey.discogsSearch(params.q, params.page ?? 1),
+      () => this.request<DiscogsSearchResponse>('/database/search', queryParams),
+      CacheTTL.SHORT,
+    );
   }
 
   /**
@@ -79,7 +84,11 @@ class DiscogsClient {
    * @see https://www.discogs.com/developers#page:database,header:database-master-release
    */
   async getMaster(masterId: number): Promise<DiscogsMaster> {
-    return this.request<DiscogsMaster>(`/masters/${masterId}`);
+    return cached(
+      CacheKey.discogsMaster(masterId),
+      () => this.request<DiscogsMaster>(`/masters/${masterId}`),
+      CacheTTL.MEDIUM,
+    );
   }
 
   /**
@@ -88,7 +97,11 @@ class DiscogsClient {
    * @see https://www.discogs.com/developers#page:database,header:database-release
    */
   async getRelease(releaseId: number): Promise<DiscogsRelease> {
-    return this.request<DiscogsRelease>(`/releases/${releaseId}`);
+    return cached(
+      CacheKey.discogsRelease(releaseId),
+      () => this.request<DiscogsRelease>(`/releases/${releaseId}`),
+      CacheTTL.MEDIUM,
+    );
   }
 
   /**
@@ -97,7 +110,11 @@ class DiscogsClient {
    * @see https://www.discogs.com/developers#page:database,header:database-artist
    */
   async getArtist(artistId: number): Promise<DiscogsArtist> {
-    return this.request<DiscogsArtist>(`/artists/${artistId}`);
+    return cached(
+      CacheKey.discogsArtist(artistId),
+      () => this.request<DiscogsArtist>(`/artists/${artistId}`),
+      CacheTTL.LONG,
+    );
   }
 
   /**

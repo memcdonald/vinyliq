@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { use, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Star, Users, Heart } from 'lucide-react';
@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import { CollectionActions } from '@/components/collection-actions';
+import { AlbumEnrichment } from '@/components/album-enrichment';
 
 function parseAlbumId(id: string): { type: 'master' | 'release'; discogsId: number } | null {
   const match = id.match(/^(master|release)-(\d+)$/);
@@ -73,6 +75,30 @@ export default function AlbumDetailPage({
     { discogsId: parsed?.discogsId ?? 0, type: parsed?.type ?? 'release' },
     { enabled: !!parsed },
   );
+
+  // Ensure the album exists in our DB so we can get an internal UUID for collection actions.
+  const ensureAlbumMutation = trpc.album.ensureAlbum.useMutation();
+  const albumEnsured = ensureAlbumMutation.data;
+  const ensuredRef = useRef(false);
+
+  useEffect(() => {
+    if (!data || !parsed || ensuredRef.current) return;
+    ensuredRef.current = true;
+
+    const primaryImage = data.images?.find((img) => img.type === 'primary') ?? data.images?.[0];
+    ensureAlbumMutation.mutate({
+      discogsId: data.id,
+      discogsMasterId: parsed.type === 'master' ? data.id : undefined,
+      title: data.title,
+      thumb: primaryImage?.uri ?? '',
+      coverImage: primaryImage?.uri ?? '',
+      year: data.year > 0 ? data.year : undefined,
+      genres: data.genres,
+      styles: data.styles,
+      country: data.country ?? undefined,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, parsed]);
 
   if (!parsed) {
     return (
@@ -268,10 +294,18 @@ export default function AlbumDetailPage({
 
           <Separator />
 
-          {/* Add to collection button */}
-          <Button size="lg" className="w-full sm:w-auto">
-            Add to Collection
-          </Button>
+          {/* Collection actions */}
+          <CollectionActions
+            albumId={albumEnsured?.id ?? ''}
+            discogsId={data.id}
+            discogsType={parsed.type}
+            title={data.title}
+            thumb={primaryImage?.uri ?? ''}
+            year={data.year}
+            genres={data.genres}
+            styles={data.styles}
+            coverImage={primaryImage?.uri ?? ''}
+          />
         </div>
       </div>
 
@@ -327,6 +361,18 @@ export default function AlbumDetailPage({
             </p>
           </CardContent>
         </Card>
+      )}
+
+      {/* Enriched data from MusicBrainz + Spotify */}
+      {albumEnsured?.id && (
+        <AlbumEnrichment
+          albumId={albumEnsured.id}
+          title={data.title}
+          artists={data.artists.map((a) => a.name)}
+          year={data.year > 0 ? data.year : undefined}
+          labels={data.labels}
+          identifiers={data.identifiers}
+        />
       )}
     </div>
   );
