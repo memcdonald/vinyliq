@@ -264,6 +264,63 @@ export const releasesRouter = createTRPCRouter({
     return fetchAllSourcesService(ctx.userId);
   }),
 
+  bulkAddReleases: protectedProcedure
+    .input(
+      z.object({
+        releases: z
+          .array(
+            z.object({
+              title: z.string().min(1).max(500),
+              artistName: z.string().min(1).max(500),
+              labelName: z.string().max(500).optional(),
+              releaseDate: z.date().optional(),
+              orderUrl: z.string().url().optional(),
+              pressRun: z.number().int().min(1).optional(),
+              coloredVinyl: z.boolean().optional(),
+              numbered: z.boolean().optional(),
+              specialPackaging: z.string().max(500).optional(),
+            }),
+          )
+          .min(1)
+          .max(500),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const values = input.releases.map((r) => {
+        const collectability = computeCollectabilityForRelease({
+          pressRun: r.pressRun ?? null,
+          coloredVinyl: r.coloredVinyl ?? false,
+          numbered: r.numbered ?? false,
+          specialPackaging: r.specialPackaging ?? null,
+        });
+
+        return {
+          userId: ctx.userId,
+          title: r.title,
+          artistName: r.artistName,
+          labelName: r.labelName ?? null,
+          releaseDate: r.releaseDate ?? null,
+          coverImage: null,
+          description: null,
+          orderUrl: r.orderUrl ?? null,
+          pressRun: r.pressRun ?? null,
+          coloredVinyl: r.coloredVinyl ?? false,
+          numbered: r.numbered ?? false,
+          specialPackaging: r.specialPackaging ?? null,
+          collectabilityScore: collectability.score,
+          collectabilityExplanation: collectability.explanation,
+          status: "upcoming" as const,
+        };
+      });
+
+      const inserted = await db
+        .insert(upcomingReleases)
+        .values(values)
+        .returning({ id: upcomingReleases.id });
+
+      return { count: inserted.length };
+    }),
+
   getCollectability: protectedProcedure
     .input(z.object({ releaseId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {

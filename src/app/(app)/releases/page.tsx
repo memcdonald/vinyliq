@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { ReleaseCard } from "@/components/release-card";
 import { AddReleaseDialog } from "@/components/add-release-dialog";
 import { ManageSourcesSheet } from "@/components/manage-sources-sheet";
+import { CsvImportDialog } from "@/components/csv-import-dialog";
 
 type SortBy = "date" | "collectability" | "title";
 type StatusFilter = "upcoming" | "released" | "archived" | undefined;
@@ -82,6 +83,7 @@ export default function ReleasesPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <AddReleaseDialog />
+          <CsvImportDialog />
           <Button
             variant="outline"
             size="sm"
