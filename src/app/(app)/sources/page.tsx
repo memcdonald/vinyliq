@@ -405,7 +405,7 @@ export default function SourcesPage() {
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-mono"
                         >
-                          {new URL(source.url).hostname}
+                          {(() => { try { return new URL(source.url).hostname; } catch { return source.url; } })()}
                           <ExternalLink className="h-3 w-3" />
                         </a>
                       ) : (

@@ -1,7 +1,7 @@
 import { eq, and } from "drizzle-orm";
 import { db } from "@/server/db";
-import { releaseSources, upcomingReleases } from "@/server/db/schema";
-import type { ReleaseSource } from "@/server/db/schema";
+import { releaseSources, upcomingReleases, dataSources } from "@/server/db/schema";
+import type { ReleaseSource, DataSource } from "@/server/db/schema";
 import type { RawRelease } from "./types";
 import { RssAdapter } from "./rss-adapter";
 import { UrlAdapter } from "./url-adapter";
@@ -99,10 +99,93 @@ export async function fetchSource(
 }
 
 /**
- * Fetch all enabled sources for a user.
+ * Fetch releases from a single data source (from the /sources page).
+ * Determines adapter from accessMethod or URL pattern.
+ */
+async function fetchDataSource(
+  source: DataSource,
+  userId: string,
+): Promise<{ added: number; total: number }> {
+  if (!source.url) {
+    return { added: 0, total: 0 };
+  }
+
+  const isRss =
+    source.accessMethod?.toLowerCase().includes("rss") ||
+    source.url.includes("/feed") ||
+    source.url.endsWith(".xml");
+
+  const adapter = isRss ? rssAdapter : urlAdapter;
+
+  let rawReleases: RawRelease[];
+  try {
+    rawReleases = await adapter.fetch(source.url);
+  } catch {
+    console.error(`Failed to fetch data source ${source.sourceName}`);
+    return { added: 0, total: 0 };
+  }
+
+  if (rawReleases.length === 0) {
+    return { added: 0, total: 0 };
+  }
+
+  // Deduplicate against all existing releases for this user
+  const existing = await db
+    .select({ title: upcomingReleases.title, artistName: upcomingReleases.artistName })
+    .from(upcomingReleases)
+    .where(eq(upcomingReleases.userId, userId));
+
+  const existingKeys = new Set(
+    existing.map((e) => `${e.artistName.toLowerCase()}::${e.title.toLowerCase()}`),
+  );
+
+  let added = 0;
+
+  for (const raw of rawReleases) {
+    const key = `${raw.artistName.toLowerCase()}::${raw.title.toLowerCase()}`;
+    if (existingKeys.has(key)) continue;
+
+    const collectability = computeCollectabilityForRelease({
+      pressRun: raw.pressRun ?? null,
+      coloredVinyl: raw.coloredVinyl ?? null,
+      numbered: raw.numbered ?? null,
+      specialPackaging: raw.specialPackaging ?? null,
+    });
+
+    await db.insert(upcomingReleases).values({
+      userId,
+      sourceId: null, // no releaseSource; came from a dataSource
+      title: raw.title,
+      artistName: raw.artistName,
+      labelName: raw.labelName ?? null,
+      releaseDate: raw.releaseDate ?? null,
+      coverImage: raw.coverImage ?? null,
+      description: raw.description ?? null,
+      orderUrl: raw.orderUrl ?? null,
+      pressRun: raw.pressRun ?? null,
+      coloredVinyl: raw.coloredVinyl ?? false,
+      numbered: raw.numbered ?? false,
+      specialPackaging: raw.specialPackaging ?? null,
+      collectabilityScore: collectability.score,
+      collectabilityExplanation: collectability.explanation,
+      status: "upcoming",
+    });
+
+    added++;
+    existingKeys.add(key);
+  }
+
+  return { added, total: rawReleases.length };
+}
+
+/**
+ * Fetch all enabled release sources AND data sources for a user.
  */
 export async function fetchAllSources(userId: string): Promise<{ totalAdded: number }> {
-  const sources = await db
+  let totalAdded = 0;
+
+  // 1. Fetch from release sources (RSS feeds / URLs configured on releases page)
+  const rSources = await db
     .select()
     .from(releaseSources)
     .where(
@@ -112,15 +195,29 @@ export async function fetchAllSources(userId: string): Promise<{ totalAdded: num
       ),
     );
 
-  let totalAdded = 0;
-
-  for (const source of sources) {
+  for (const source of rSources) {
     try {
       const result = await fetchSource(source, userId);
       totalAdded += result.added;
     } catch {
-      // Log but continue with other sources
-      console.error(`Failed to fetch source ${source.name} (${source.id})`);
+      console.error(`Failed to fetch release source ${source.name} (${source.id})`);
+    }
+  }
+
+  // 2. Fetch from data sources (research sources configured on /sources page)
+  const dSources = await db
+    .select()
+    .from(dataSources)
+    .where(eq(dataSources.userId, userId));
+
+  const probeableSources = dSources.filter((s) => s.url);
+
+  for (const source of probeableSources) {
+    try {
+      const result = await fetchDataSource(source, userId);
+      totalAdded += result.added;
+    } catch {
+      console.error(`Failed to fetch data source ${source.sourceName} (${source.id})`);
     }
   }
 

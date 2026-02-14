@@ -8,6 +8,7 @@ import {
 import { RssAdapter } from "@/server/services/releases/rss-adapter";
 import { UrlAdapter } from "@/server/services/releases/url-adapter";
 import { computeCollectability } from "@/server/services/releases/collectability";
+import { getUserApiKeys, type ResolvedKeys } from "@/server/services/ai/keys";
 import { scoreTasteMatch } from "./taste-match";
 import { batchExplain } from "./ai-explain";
 import { filterToAlbums } from "./validate";
@@ -28,6 +29,7 @@ interface ProbeResult {
 async function probeSource(
   source: DataSource,
   userId: string,
+  keys?: ResolvedKeys,
 ): Promise<ProbeResult> {
   if (!source.url) {
     return { sourceName: source.sourceName, discovered: 0, explained: 0 };
@@ -54,7 +56,7 @@ async function probeSource(
   }
 
   // Filter to actual album releases (heuristic + AI validation)
-  rawReleases = await filterToAlbums(rawReleases);
+  rawReleases = await filterToAlbums(rawReleases, keys);
   if (rawReleases.length === 0) {
     return { sourceName: source.sourceName, discovered: 0, explained: 0 };
   }
@@ -138,7 +140,7 @@ async function probeSource(
   // Generate AI explanations for new suggestions
   let explained = 0;
   if (newSuggestions.length > 0) {
-    explained = await batchExplain(userId);
+    explained = await batchExplain(userId, keys);
   }
 
   return {
@@ -154,6 +156,8 @@ async function probeSource(
 export async function probeAllSources(
   userId: string,
 ): Promise<{ results: ProbeResult[]; totalDiscovered: number }> {
+  const keys = await getUserApiKeys(userId);
+
   const sources = await db
     .select()
     .from(dataSources)
@@ -171,7 +175,7 @@ export async function probeAllSources(
 
   for (const source of probeable) {
     try {
-      const result = await probeSource(source, userId);
+      const result = await probeSource(source, userId, keys);
       results.push(result);
       totalDiscovered += result.discovered;
     } catch {

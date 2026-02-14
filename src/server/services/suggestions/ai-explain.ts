@@ -2,7 +2,7 @@ import { eq, and, isNull } from "drizzle-orm";
 import { db } from "@/server/db";
 import { aiSuggestions } from "@/server/db/schema";
 import { getTasteProfile, topN } from "@/server/recommendation/taste-profile";
-import { env } from "@/lib/env";
+import type { ResolvedKeys } from "@/server/services/ai/keys";
 
 const BATCH_SIZE = 10;
 
@@ -20,7 +20,7 @@ interface SuggestionForExplanation {
  * Generate AI explanations for suggestions that don't have one yet.
  * Returns the number of suggestions explained.
  */
-export async function batchExplain(userId: string): Promise<number> {
+export async function batchExplain(userId: string, keys?: ResolvedKeys): Promise<number> {
   // Get suggestions without explanations
   const unexplained = await db
     .select({
@@ -56,6 +56,7 @@ export async function batchExplain(userId: string): Promise<number> {
     unexplained,
     topGenres,
     topArtists,
+    keys,
   );
 
   let explained = 0;
@@ -77,15 +78,19 @@ async function generateExplanations(
   suggestions: SuggestionForExplanation[],
   topGenres: string,
   topArtists: string,
+  keys?: ResolvedKeys,
 ): Promise<(string | null)[]> {
   const prompt = buildBatchPrompt(suggestions, topGenres, topArtists);
 
+  const anthropicKey = keys?.anthropicKey ?? "";
+  const openaiKey = keys?.openaiKey ?? "";
+
   // Try Claude first, fallback to OpenAI
-  if (env.ANTHROPIC_API_KEY) {
-    return callClaude(prompt, suggestions.length);
+  if (anthropicKey) {
+    return callClaude(prompt, suggestions.length, anthropicKey);
   }
-  if (env.OPENAI_API_KEY) {
-    return callOpenAI(prompt, suggestions.length);
+  if (openaiKey) {
+    return callOpenAI(prompt, suggestions.length, openaiKey);
   }
 
   // No AI configured — return null for all
@@ -122,12 +127,13 @@ Example: ["This aligns with your love of jazz...", "A rare limited pressing from
 async function callClaude(
   prompt: string,
   count: number,
+  apiKey: string,
 ): Promise<(string | null)[]> {
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-api-key": env.ANTHROPIC_API_KEY,
+      "x-api-key": apiKey,
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
@@ -150,12 +156,13 @@ async function callClaude(
 async function callOpenAI(
   prompt: string,
   count: number,
+  apiKey: string,
 ): Promise<(string | null)[]> {
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
       model: "gpt-4o-mini",

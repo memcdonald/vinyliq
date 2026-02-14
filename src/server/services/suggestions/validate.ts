@@ -1,5 +1,5 @@
 import type { RawRelease } from "@/server/services/releases/types";
-import { env } from "@/lib/env";
+import type { ResolvedKeys } from "@/server/services/ai/keys";
 
 /**
  * Exclusion keywords — if any appear in title, artistName, or description,
@@ -44,11 +44,15 @@ export function isLikelyAlbum(release: RawRelease): boolean {
  */
 export async function validateAlbumsWithAI(
   releases: RawRelease[],
+  keys?: ResolvedKeys,
 ): Promise<RawRelease[]> {
   if (releases.length === 0) return [];
 
+  const anthropicKey = keys?.anthropicKey ?? "";
+  const openaiKey = keys?.openaiKey ?? "";
+
   // No AI key → fall back to heuristic-only
-  if (!env.ANTHROPIC_API_KEY && !env.OPENAI_API_KEY) {
+  if (!anthropicKey && !openaiKey) {
     return releases;
   }
 
@@ -65,9 +69,9 @@ Items:
 ${numbered.join("\n")}`;
 
   try {
-    const indices = env.ANTHROPIC_API_KEY
-      ? await callClaudeValidation(prompt)
-      : await callOpenAIValidation(prompt);
+    const indices = anthropicKey
+      ? await callClaudeValidation(prompt, anthropicKey)
+      : await callOpenAIValidation(prompt, openaiKey);
 
     if (!indices) return releases; // API error → keep all
 
@@ -85,25 +89,27 @@ ${numbered.join("\n")}`;
  */
 export async function filterToAlbums(
   releases: RawRelease[],
+  keys?: ResolvedKeys,
 ): Promise<RawRelease[]> {
   // Layer 1: fast heuristic
   const heuristicPassed = releases.filter(isLikelyAlbum);
   if (heuristicPassed.length === 0) return [];
 
   // Layer 2: AI validation
-  return validateAlbumsWithAI(heuristicPassed);
+  return validateAlbumsWithAI(heuristicPassed, keys);
 }
 
 // ── AI helpers ──────────────────────────────────────────────────────────
 
 async function callClaudeValidation(
   prompt: string,
+  apiKey: string,
 ): Promise<number[] | null> {
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-api-key": env.ANTHROPIC_API_KEY,
+      "x-api-key": apiKey,
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
@@ -125,12 +131,13 @@ async function callClaudeValidation(
 
 async function callOpenAIValidation(
   prompt: string,
+  apiKey: string,
 ): Promise<number[] | null> {
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
       model: "gpt-4o-mini",
