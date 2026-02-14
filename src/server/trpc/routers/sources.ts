@@ -55,6 +55,31 @@ export const sourcesRouter = createTRPCRouter({
       return { count: inserted.length };
     }),
 
+  updateSource: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        sourceName: z.string().min(1).max(500).optional(),
+        url: z.string().max(2000).nullable().optional(),
+        category: z.string().max(500).nullable().optional(),
+        priority: z.string().min(1).max(200).optional(),
+        pulseUse: z.string().max(2000).nullable().optional(),
+        accessMethod: z.string().max(500).nullable().optional(),
+        notes: z.string().max(2000).nullable().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { id, ...updates } = input;
+      const result = await db
+        .update(dataSources)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(
+          and(eq(dataSources.id, id), eq(dataSources.userId, ctx.userId)),
+        )
+        .returning();
+      return result[0] ?? null;
+    }),
+
   removeSource: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {

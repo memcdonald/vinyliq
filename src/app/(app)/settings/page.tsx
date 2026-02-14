@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Settings,
@@ -9,6 +9,7 @@ import {
   Download,
   Music,
   Disc3,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -25,9 +26,47 @@ import { Badge } from "@/components/ui/badge";
 import { useSession } from "@/server/auth/client";
 import { trpc } from "@/lib/trpc/client";
 
+function ImportProgress({ service }: { service: "discogs" | "spotify" }) {
+  const { data: progress } = trpc.settings.getImportProgress.useQuery(
+    { service },
+    { refetchInterval: 1000 },
+  );
+
+  if (!progress || progress.status === "completed") return null;
+
+  const pct = progress.total > 0
+    ? Math.round((progress.imported / progress.total) * 100)
+    : 0;
+
+  return (
+    <div className="space-y-1.5 pt-2">
+      <div className="flex items-center justify-between text-xs">
+        <span className="flex items-center gap-1.5 text-muted-foreground">
+          {progress.status === "running" && (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          )}
+          {progress.message}
+        </span>
+        <span className="font-mono text-muted-foreground">
+          {progress.imported}/{progress.total}
+          {progress.errors > 0 && ` (${progress.errors} errors)`}
+        </span>
+      </div>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+        <div
+          className="h-full rounded-full bg-primary transition-all duration-300"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function SettingsContent() {
   const searchParams = useSearchParams();
   const { data: session } = useSession();
+  const [importingDiscogs, setImportingDiscogs] = useState(false);
+  const [importingSpotify, setImportingSpotify] = useState(false);
 
   const connectedAccounts = trpc.settings.getConnectedAccounts.useQuery();
   const utils = trpc.useUtils();
@@ -55,6 +94,7 @@ function SettingsContent() {
   const importDiscogs = trpc.settings.importDiscogsCollection.useMutation({
     onSuccess: (data) => {
       toast.success(data.message);
+      setImportingDiscogs(true);
     },
     onError: (error) => {
       toast.error(`Import failed: ${error.message}`);
@@ -64,6 +104,7 @@ function SettingsContent() {
   const importSpotify = trpc.settings.importSpotifyLibrary.useMutation({
     onSuccess: (data) => {
       toast.success(data.message);
+      setImportingSpotify(true);
     },
     onError: (error) => {
       toast.error(`Import failed: ${error.message}`);
@@ -208,6 +249,7 @@ function SettingsContent() {
                     Disconnect
                   </Button>
                 </div>
+                {importingDiscogs && <ImportProgress service="discogs" />}
               </div>
             ) : (
               <div className="space-y-1">
@@ -269,6 +311,7 @@ function SettingsContent() {
                     Disconnect
                   </Button>
                 </div>
+                {importingSpotify && <ImportProgress service="spotify" />}
               </div>
             ) : (
               <div className="space-y-1">

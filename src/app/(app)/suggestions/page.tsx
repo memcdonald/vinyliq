@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type StatusFilter = "new" | "interested" | "dismissed";
+type SortBy = "combined" | "taste" | "collectability" | "date";
 
 function ScoreBadge({ score, label }: { score: number | null; label: string }) {
   if (score === null) return null;
@@ -54,6 +55,7 @@ function SuggestionCardSkeleton() {
 
 export default function SuggestionsPage() {
   const [filter, setFilter] = useState<StatusFilter>("new");
+  const [sortBy, setSortBy] = useState<SortBy>("combined");
 
   const { data: suggestions, isLoading } = trpc.suggestions.getAll.useQuery({
     status: filter,
@@ -119,30 +121,53 @@ export default function SuggestionsPage() {
         </Button>
       </div>
 
-      {/* Status filter */}
-      <div className="mb-4 flex gap-1">
-        {(
-          [
-            ["new", "New"],
-            ["interested", "Interested"],
-            ["dismissed", "Dismissed"],
-          ] as const
-        ).map(([value, label]) => (
-          <Button
-            key={value}
-            variant={filter === value ? "default" : "outline"}
-            size="sm"
-            className="h-7 text-xs"
-            onClick={() => setFilter(value)}
-          >
-            {label}
-            {stats && (
-              <span className="ml-1 opacity-60">
-                ({stats[value]})
-              </span>
-            )}
-          </Button>
-        ))}
+      {/* Filters and sort */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="flex gap-1">
+          {(
+            [
+              ["new", "New"],
+              ["interested", "Interested"],
+              ["dismissed", "Dismissed"],
+            ] as const
+          ).map(([value, label]) => (
+            <Button
+              key={value}
+              variant={filter === value ? "default" : "outline"}
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => setFilter(value)}
+            >
+              {label}
+              {stats && (
+                <span className="ml-1 opacity-60">
+                  ({stats[value]})
+                </span>
+              )}
+            </Button>
+          ))}
+        </div>
+        <div className="h-4 w-px bg-border" />
+        <div className="flex gap-1">
+          {(
+            [
+              ["combined", "Best Match"],
+              ["taste", "Taste"],
+              ["collectability", "Collectability"],
+              ["date", "Newest"],
+            ] as const
+          ).map(([value, label]) => (
+            <Button
+              key={value}
+              variant={sortBy === value ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => setSortBy(value)}
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
       </div>
 
       {isLoading ? (
@@ -178,7 +203,18 @@ export default function SuggestionsPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {suggestions.map((s) => (
+          {[...suggestions].sort((a, b) => {
+            switch (sortBy) {
+              case "taste":
+                return (b.tasteScore ?? 0) - (a.tasteScore ?? 0);
+              case "collectability":
+                return (b.collectabilityScore ?? 0) - (a.collectabilityScore ?? 0);
+              case "date":
+                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+              default:
+                return (b.combinedScore ?? 0) - (a.combinedScore ?? 0);
+            }
+          }).map((s) => (
             <Card key={s.id} className="overflow-hidden">
               <CardContent className="flex gap-4 p-4">
                 {/* Cover image */}
