@@ -16,9 +16,20 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "VinylIQ - Vinyl Record Research & Collection",
+  title: {
+    default: "VinylIQ - Vinyl Record Research & Collection",
+    template: "%s | VinylIQ",
+  },
   description:
     "Research, collect, and discover vinyl records. Browse detailed release information, track your collection, manage your wantlist, and get personalized recommendations.",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000"),
+  openGraph: {
+    type: "website",
+    siteName: "VinylIQ",
+    title: "VinylIQ - Vinyl Record Research & Collection",
+    description:
+      "Research, collect, and discover vinyl records with data from Discogs, MusicBrainz, and Spotify.",
+  },
 };
 
 export default function RootLayout({

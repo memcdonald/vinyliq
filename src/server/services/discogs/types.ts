@@ -240,3 +240,32 @@ export interface DiscogsCollectionItemsResponse {
   };
   releases: DiscogsCollectionItem[];
 }
+
+// ---------------------------------------------------------------------------
+// Artist releases types
+// ---------------------------------------------------------------------------
+
+export interface DiscogsArtistRelease {
+  id: number;
+  title: string;
+  type: string; // 'master' or 'release'
+  main_release?: number;
+  artist: string;
+  role: string;
+  resource_url: string;
+  year: number;
+  thumb: string;
+  format?: string;
+  label?: string;
+  status?: string;
+}
+
+export interface DiscogsArtistReleasesResponse {
+  pagination: {
+    page: number;
+    pages: number;
+    per_page: number;
+    items: number;
+  };
+  releases: DiscogsArtistRelease[];
+}

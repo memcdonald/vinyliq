@@ -7,6 +7,7 @@ import type {
   DiscogsMasterVersionsResponse,
   DiscogsCollectionFoldersResponse,
   DiscogsCollectionItemsResponse,
+  DiscogsArtistReleasesResponse,
 } from './types';
 import { cached, CacheTTL, CacheKey } from '@/lib/cache';
 
@@ -134,6 +135,34 @@ class DiscogsClient {
     return this.request<DiscogsMasterVersionsResponse>(
       `/masters/${masterId}/versions`,
       params,
+    );
+  }
+
+  /**
+   * Get an artist's releases.
+   *
+   * @see https://www.discogs.com/developers#page:database,header:database-artist-releases
+   */
+  async getArtistReleases(
+    artistId: number,
+    page: number = 1,
+    perPage: number = 50,
+    sort: string = 'year',
+    sortOrder: string = 'desc',
+  ): Promise<DiscogsArtistReleasesResponse> {
+    return cached(
+      `discogs:artist-releases:${artistId}:${page}`,
+      () =>
+        this.request<DiscogsArtistReleasesResponse>(
+          `/artists/${artistId}/releases`,
+          {
+            page: String(page),
+            per_page: String(perPage),
+            sort,
+            sort_order: sortOrder,
+          },
+        ),
+      CacheTTL.MEDIUM,
     );
   }
 

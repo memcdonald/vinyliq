@@ -2,11 +2,12 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Library, Star, Search } from "lucide-react";
+import { Library, Star, Search, BarChart3, Disc3, Heart, Headphones } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 
 function CollectionSkeleton() {
@@ -21,6 +22,131 @@ function CollectionSkeleton() {
           </div>
         </Card>
       ))}
+    </div>
+  );
+}
+
+function CollectionStats() {
+  const { data: stats, isLoading } = trpc.collection.stats.useQuery();
+
+  if (isLoading) {
+    return (
+      <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-24 rounded-lg" />
+        ))}
+      </div>
+    );
+  }
+
+  if (!stats || stats.totalAlbums === 0) return null;
+
+  return (
+    <div className="mb-8 space-y-4">
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Card>
+          <CardContent className="flex items-center gap-3 p-4">
+            <Disc3 className="h-8 w-8 text-primary shrink-0" />
+            <div>
+              <p className="text-2xl font-bold">{stats.owned}</p>
+              <p className="text-xs text-muted-foreground">Owned</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 p-4">
+            <Heart className="h-8 w-8 text-red-500 shrink-0" />
+            <div>
+              <p className="text-2xl font-bold">{stats.wanted}</p>
+              <p className="text-xs text-muted-foreground">Wanted</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 p-4">
+            <Headphones className="h-8 w-8 text-blue-500 shrink-0" />
+            <div>
+              <p className="text-2xl font-bold">{stats.listened}</p>
+              <p className="text-xs text-muted-foreground">Listened</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 p-4">
+            <Star className="h-8 w-8 text-yellow-500 shrink-0" />
+            <div>
+              <p className="text-2xl font-bold">
+                {stats.avgRating !== null ? stats.avgRating.toFixed(1) : '—'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Avg Rating ({stats.rated})
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Genre and Decade breakdown */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {stats.topGenres.length > 0 && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <BarChart3 className="h-4 w-4" />
+                Top Genres
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {stats.topGenres.map((g) => (
+                <div key={g.genre} className="flex items-center justify-between">
+                  <span className="text-sm">{g.genre}</span>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="h-2 rounded-full bg-primary"
+                      style={{
+                        width: `${Math.max((g.count / stats.topGenres[0].count) * 80, 8)}px`,
+                      }}
+                    />
+                    <span className="text-xs text-muted-foreground w-6 text-right">
+                      {g.count}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {stats.topDecades.length > 0 && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <BarChart3 className="h-4 w-4" />
+                By Decade
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {stats.topDecades.map((d) => (
+                <div key={d.decade} className="flex items-center justify-between">
+                  <span className="text-sm">{d.decade}</span>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="h-2 rounded-full bg-primary"
+                      style={{
+                        width: `${Math.max((d.count / Math.max(...stats.topDecades.map((x) => x.count))) * 80, 8)}px`,
+                      }}
+                    />
+                    <span className="text-xs text-muted-foreground w-6 text-right">
+                      {d.count}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
@@ -49,6 +175,9 @@ export default function CollectionPage() {
           </div>
         </div>
       </div>
+
+      {/* Stats Dashboard */}
+      <CollectionStats />
 
       {isLoading ? (
         <CollectionSkeleton />

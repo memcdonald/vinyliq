@@ -4,6 +4,7 @@ import { searchRouter } from './search';
 import { collectionRouter } from './collection';
 import { settingsRouter } from './settings';
 import { recommendationRouter } from './recommendation';
+import { artistRouter } from './artist';
 
 export const appRouter = createTRPCRouter({
   album: albumRouter,
@@ -11,6 +12,7 @@ export const appRouter = createTRPCRouter({
   collection: collectionRouter,
   settings: settingsRouter,
   recommendation: recommendationRouter,
+  artist: artistRouter,
 });
 
 export type AppRouter = typeof appRouter;

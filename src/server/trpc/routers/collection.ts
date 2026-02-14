@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql, count } from "drizzle-orm";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { db } from "@/server/db";
 import { albums, collectionItems } from "@/server/db/schema";
@@ -201,4 +201,83 @@ export const collectionRouter = createTRPCRouter({
 
       return item ?? null;
     }),
+
+  /**
+   * Get aggregate collection statistics.
+   */
+  stats: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.userId;
+
+    // Get all collection items with album data
+    const items = await db
+      .select({
+        status: collectionItems.status,
+        rating: collectionItems.rating,
+        genres: albums.genres,
+        styles: albums.styles,
+        year: albums.year,
+      })
+      .from(collectionItems)
+      .innerJoin(albums, eq(collectionItems.albumId, albums.id))
+      .where(eq(collectionItems.userId, userId));
+
+    const totalAlbums = items.length;
+    const owned = items.filter((i) => i.status === 'owned').length;
+    const wanted = items.filter((i) => i.status === 'wanted').length;
+    const listened = items.filter((i) => i.status === 'listened').length;
+
+    // Ratings
+    const rated = items.filter((i) => i.rating !== null);
+    const avgRating = rated.length > 0
+      ? rated.reduce((sum, i) => sum + (i.rating ?? 0), 0) / rated.length
+      : null;
+
+    // Genre distribution
+    const genreCounts: Record<string, number> = {};
+    for (const item of items) {
+      for (const genre of item.genres ?? []) {
+        genreCounts[genre] = (genreCounts[genre] ?? 0) + 1;
+      }
+    }
+    const topGenres = Object.entries(genreCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([genre, count]) => ({ genre, count }));
+
+    // Decade distribution
+    const decadeCounts: Record<string, number> = {};
+    for (const item of items) {
+      if (item.year && item.year > 1900) {
+        const decade = `${Math.floor(item.year / 10) * 10}s`;
+        decadeCounts[decade] = (decadeCounts[decade] ?? 0) + 1;
+      }
+    }
+    const topDecades = Object.entries(decadeCounts)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([decade, count]) => ({ decade, count }));
+
+    // Style distribution
+    const styleCounts: Record<string, number> = {};
+    for (const item of items) {
+      for (const style of item.styles ?? []) {
+        styleCounts[style] = (styleCounts[style] ?? 0) + 1;
+      }
+    }
+    const topStyles = Object.entries(styleCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([style, count]) => ({ style, count }));
+
+    return {
+      totalAlbums,
+      owned,
+      wanted,
+      listened,
+      rated: rated.length,
+      avgRating,
+      topGenres,
+      topDecades,
+      topStyles,
+    };
+  }),
 });
