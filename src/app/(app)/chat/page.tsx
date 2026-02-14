@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
 
 export default function ChatPage() {
   const [input, setInput] = useState("");
+  const [optimisticMsg, setOptimisticMsg] = useState<string | null>(null);
+  const [optimisticReply, setOptimisticReply] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -17,12 +19,16 @@ export default function ChatPage() {
   const utils = trpc.useUtils();
 
   const sendMutation = trpc.chat.sendMessage.useMutation({
-    onSuccess: () => {
-      setInput("");
-      utils.chat.getHistory.invalidate();
+    onSuccess: (data) => {
+      setOptimisticReply(data.content);
+      utils.chat.getHistory.invalidate().then(() => {
+        setOptimisticMsg(null);
+        setOptimisticReply(null);
+      });
     },
     onError: (error) => {
       toast.error("Failed to send message", { description: error.message });
+      setOptimisticMsg(null);
     },
   });
 
@@ -36,12 +42,15 @@ export default function ChatPage() {
   // Auto-scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [history]);
+  }, [history, optimisticMsg, optimisticReply]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = input.trim();
     if (!trimmed || sendMutation.isPending) return;
+    setOptimisticMsg(trimmed);
+    setOptimisticReply(null);
+    setInput("");
     sendMutation.mutate({ message: trimmed });
   }
 
@@ -89,7 +98,7 @@ export default function ChatPage() {
               </div>
             ))}
           </div>
-        ) : !history || history.length === 0 ? (
+        ) : (!history || history.length === 0) && !optimisticMsg ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <Bot className="mb-4 h-16 w-16 text-muted-foreground/40" />
             <h2 className="mb-2 text-lg font-semibold">
@@ -122,7 +131,7 @@ export default function ChatPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {history.map((msg) => (
+            {(history ?? []).map((msg) => (
               <div
                 key={msg.id}
                 className={cn(
@@ -152,7 +161,19 @@ export default function ChatPage() {
                 )}
               </div>
             ))}
-            {sendMutation.isPending && (
+            {/* Optimistic user message */}
+            {optimisticMsg && (
+              <div className="flex gap-3 justify-end">
+                <div className="max-w-[80%] rounded-lg px-4 py-3 text-sm bg-primary text-primary-foreground">
+                  <p className="whitespace-pre-wrap">{optimisticMsg}</p>
+                </div>
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </div>
+            )}
+            {/* Optimistic AI reply or thinking indicator */}
+            {optimisticMsg && !optimisticReply && (
               <div className="flex gap-3">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
                   <Bot className="h-4 w-4 text-primary" />
@@ -160,6 +181,16 @@ export default function ChatPage() {
                 <div className="flex items-center gap-2 rounded-lg bg-muted px-4 py-3 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Thinking...
+                </div>
+              </div>
+            )}
+            {optimisticReply && (
+              <div className="flex gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                  <Bot className="h-4 w-4 text-primary" />
+                </div>
+                <div className="max-w-[80%] rounded-lg px-4 py-3 text-sm bg-muted">
+                  <p className="whitespace-pre-wrap">{optimisticReply}</p>
                 </div>
               </div>
             )}
@@ -181,12 +212,12 @@ export default function ChatPage() {
           placeholder="Ask about vinyl..."
           rows={1}
           className="flex-1 resize-none rounded-lg border bg-background px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-          disabled={sendMutation.isPending}
+          disabled={!!optimisticMsg}
         />
         <Button
           type="submit"
           size="icon"
-          disabled={!input.trim() || sendMutation.isPending}
+          disabled={!input.trim() || !!optimisticMsg}
           className="shrink-0"
         >
           <Send className="h-4 w-4" />

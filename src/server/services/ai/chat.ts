@@ -1,6 +1,6 @@
 import { eq, asc, desc } from "drizzle-orm";
 import { db } from "@/server/db";
-import { chatMessages, collectionItems, albums } from "@/server/db/schema";
+import { chatMessages, collectionItems, albums, user } from "@/server/db/schema";
 import { getTasteProfile, topN } from "@/server/recommendation/taste-profile";
 import { env } from "@/lib/env";
 
@@ -24,6 +24,15 @@ export async function sendChatMessage(
     content: message,
   });
 
+  // Get user preferences
+  const [prefs] = await db
+    .select({
+      preferredAiProvider: user.preferredAiProvider,
+      chatSystemPrompt: user.chatSystemPrompt,
+    })
+    .from(user)
+    .where(eq(user.id, userId));
+
   // Get conversation history
   const history = await db
     .select({ role: chatMessages.role, content: chatMessages.content })
@@ -36,11 +45,16 @@ export async function sendChatMessage(
   history.reverse();
 
   // Build context about user's collection
-  const context = await buildUserContext(userId);
+  const context = await buildUserContext(userId, prefs?.chatSystemPrompt ?? null);
+
+  // Determine which provider to use
+  const preferred = prefs?.preferredAiProvider ?? env.AI_PROVIDER;
 
   // Get AI response
   let responseText: string;
-  if (env.ANTHROPIC_API_KEY) {
+  if (preferred === "openai" && env.OPENAI_API_KEY) {
+    responseText = await callOpenAI(context, history);
+  } else if (env.ANTHROPIC_API_KEY) {
     responseText = await callClaude(context, history);
   } else if (env.OPENAI_API_KEY) {
     responseText = await callOpenAI(context, history);
@@ -59,7 +73,10 @@ export async function sendChatMessage(
   return { content: responseText };
 }
 
-async function buildUserContext(userId: string): Promise<string> {
+async function buildUserContext(
+  userId: string,
+  customPrompt: string | null,
+): Promise<string> {
   const profile = await getTasteProfile(userId);
 
   const topGenres = topN(profile.genreWeights, 5)
@@ -96,15 +113,23 @@ async function buildUserContext(userId: string): Promise<string> {
     .map((c) => `${c.title} (${c.rating}/10)`)
     .join(", ");
 
-  return `You are VinylIQ, a knowledgeable vinyl record advisor and music expert. You help collectors discover music, evaluate pressings, understand market trends, and build their collections.
-
-## Collector Profile
+  const collectorProfile = `## Collector Profile
 - Collection size: ${owned.length} owned, ${wanted.length} on wantlist
 - Top genres: ${topGenres || "Not enough data"}
 - Top styles: ${topStyles || "Not enough data"}
 - Favorite artists: ${topArtists || "Not enough data"}
 - Preferred eras: ${topEras || "Not enough data"}
-- Top-rated albums: ${topRated || "None rated yet"}
+- Top-rated albums: ${topRated || "None rated yet"}`;
+
+  if (customPrompt) {
+    return `${customPrompt}
+
+${collectorProfile}`;
+  }
+
+  return `You are VinylIQ, a knowledgeable vinyl record advisor and music expert. You help collectors discover music, evaluate pressings, understand market trends, and build their collections.
+
+${collectorProfile}
 
 ## Guidelines
 - Be conversational and personalized based on the collector's taste profile

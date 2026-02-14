@@ -191,6 +191,8 @@ export const user = pgTable("user", {
   spotifyTokenExpiresAt: timestamp("spotify_token_expires_at", {
     withTimezone: true,
   }),
+  preferredAiProvider: text("preferred_ai_provider"), // 'claude' | 'openai' | null (use env default)
+  chatSystemPrompt: text("chat_system_prompt"), // custom system prompt override
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .default(sql`now()`),

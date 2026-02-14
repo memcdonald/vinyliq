@@ -1,18 +1,20 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   KeyRound,
   CheckCircle2,
   XCircle,
-  ExternalLink,
   Disc3,
-  Music,
   Bot,
   Database,
   Shield,
   LinkIcon,
   Unlink,
   Loader2,
+  Save,
+  RotateCcw,
+  MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
@@ -79,15 +81,12 @@ function DiscogsConnection({
   const utils = trpc.useUtils();
 
   const { refetch: fetchAuthUrl, isFetching: isConnecting } =
-    trpc.settings.getDiscogsAuthUrl.useQuery(undefined, {
-      enabled: false,
-    });
+    trpc.settings.getDiscogsAuthUrl.useQuery(undefined, { enabled: false });
 
   const disconnectMutation = trpc.settings.disconnectDiscogs.useMutation({
     onSuccess: () => {
       toast.success("Discogs disconnected");
       utils.settings.getCredentialsStatus.invalidate();
-      utils.settings.getConnectedAccounts.invalidate();
     },
     onError: (error) => {
       toast.error("Failed to disconnect", { description: error.message });
@@ -155,15 +154,12 @@ function SpotifyConnection({
   const utils = trpc.useUtils();
 
   const { refetch: fetchAuthUrl, isFetching: isConnecting } =
-    trpc.settings.getSpotifyAuthUrl.useQuery(undefined, {
-      enabled: false,
-    });
+    trpc.settings.getSpotifyAuthUrl.useQuery(undefined, { enabled: false });
 
   const disconnectMutation = trpc.settings.disconnectSpotify.useMutation({
     onSuccess: () => {
       toast.success("Spotify disconnected");
       utils.settings.getCredentialsStatus.invalidate();
-      utils.settings.getConnectedAccounts.invalidate();
     },
     onError: (error) => {
       toast.error("Failed to disconnect", { description: error.message });
@@ -221,15 +217,163 @@ function SpotifyConnection({
   );
 }
 
+function AiPreferences({
+  hasAnthropic,
+  hasOpenai,
+}: {
+  hasAnthropic: boolean;
+  hasOpenai: boolean;
+}) {
+  const utils = trpc.useUtils();
+  const { data: prefs, isLoading } = trpc.settings.getAiPreferences.useQuery();
+
+  const [prompt, setPrompt] = useState("");
+  const [promptDirty, setPromptDirty] = useState(false);
+
+  useEffect(() => {
+    if (prefs?.chatSystemPrompt) {
+      setPrompt(prefs.chatSystemPrompt);
+    }
+  }, [prefs?.chatSystemPrompt]);
+
+  const updateMutation = trpc.settings.updateAiPreferences.useMutation({
+    onSuccess: () => {
+      toast.success("AI preferences saved");
+      utils.settings.getAiPreferences.invalidate();
+      utils.settings.getCredentialsStatus.invalidate();
+      setPromptDirty(false);
+    },
+    onError: (error) => {
+      toast.error("Failed to save", { description: error.message });
+    },
+  });
+
+  if (isLoading) return <Skeleton className="h-32 w-full rounded-lg" />;
+
+  const currentProvider = prefs?.provider ?? "claude";
+  const canSwitch = hasAnthropic && hasOpenai;
+
+  return (
+    <div className="space-y-4">
+      {/* Provider switcher */}
+      {canSwitch && (
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium">Active Provider</p>
+            <p className="text-xs text-muted-foreground">
+              Choose which AI to use for chat and evaluations
+            </p>
+          </div>
+          <div className="flex gap-1">
+            <Button
+              variant={currentProvider === "claude" ? "default" : "outline"}
+              size="xs"
+              onClick={() =>
+                updateMutation.mutate({ provider: "claude" })
+              }
+              disabled={updateMutation.isPending}
+            >
+              Claude
+            </Button>
+            <Button
+              variant={currentProvider === "openai" ? "default" : "outline"}
+              size="xs"
+              onClick={() =>
+                updateMutation.mutate({ provider: "openai" })
+              }
+              disabled={updateMutation.isPending}
+            >
+              OpenAI
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {!canSwitch && (
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium">Active Provider</p>
+            <p className="text-xs text-muted-foreground">
+              Add both API keys to switch between providers
+            </p>
+          </div>
+          <Badge variant="outline">{currentProvider}</Badge>
+        </div>
+      )}
+
+      <Separator />
+
+      {/* Custom system prompt */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium">Chat System Prompt</p>
+            <p className="text-xs text-muted-foreground">
+              Customize how the AI assistant behaves. Your collection profile is always appended.
+            </p>
+          </div>
+        </div>
+        <textarea
+          value={prompt}
+          onChange={(e) => {
+            setPrompt(e.target.value);
+            setPromptDirty(true);
+          }}
+          placeholder="You are VinylIQ, a knowledgeable vinyl record advisor..."
+          rows={5}
+          className="w-full resize-y rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+        <div className="flex items-center gap-2">
+          <Button
+            size="xs"
+            onClick={() =>
+              updateMutation.mutate({
+                chatSystemPrompt: prompt.trim() || null,
+              })
+            }
+            disabled={!promptDirty || updateMutation.isPending}
+          >
+            {updateMutation.isPending ? (
+              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+            ) : (
+              <Save className="h-3 w-3 mr-1" />
+            )}
+            Save Prompt
+          </Button>
+          {prefs?.chatSystemPrompt && (
+            <Button
+              variant="ghost"
+              size="xs"
+              className="text-muted-foreground"
+              onClick={() => {
+                setPrompt("");
+                setPromptDirty(true);
+                updateMutation.mutate({ chatSystemPrompt: null });
+              }}
+              disabled={updateMutation.isPending}
+            >
+              <RotateCcw className="h-3 w-3 mr-1" />
+              Reset to Default
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CredentialsPage() {
-  const { data: status, isLoading } = trpc.settings.getCredentialsStatus.useQuery();
+  const { data: status, isLoading } =
+    trpc.settings.getCredentialsStatus.useQuery();
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
       <div className="flex items-center gap-3">
         <KeyRound className="h-6 w-6 text-muted-foreground" />
         <div>
-          <h1 className="text-2xl font-bold tracking-tight font-sans-display">Credentials</h1>
+          <h1 className="text-2xl font-bold tracking-tight font-sans-display">
+            Credentials
+          </h1>
           <p className="text-sm text-muted-foreground">
             API keys and service connections
           </p>
@@ -260,7 +404,9 @@ export default function CredentialsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium">Discogs</p>
-                    <p className="font-mono text-xs text-muted-foreground">DISCOGS_CONSUMER_KEY</p>
+                    <p className="font-mono text-xs text-muted-foreground">
+                      DISCOGS_CONSUMER_KEY
+                    </p>
                   </div>
                   <StatusIndicator configured={status.discogs.consumerKey} />
                 </div>
@@ -275,7 +421,9 @@ export default function CredentialsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium">Spotify</p>
-                    <p className="font-mono text-xs text-muted-foreground">SPOTIFY_CLIENT_ID</p>
+                    <p className="font-mono text-xs text-muted-foreground">
+                      SPOTIFY_CLIENT_ID
+                    </p>
                   </div>
                   <StatusIndicator configured={status.spotify.clientId} />
                 </div>
@@ -298,42 +446,23 @@ export default function CredentialsPage() {
                 Power suggestions, evaluations, and chat
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-1">
+            <CardContent className="space-y-3">
               <CredentialRow
                 label="Anthropic (Claude)"
                 envVar="ANTHROPIC_API_KEY"
                 configured={status.ai.anthropic}
-                extra={
-                  status.ai.provider === "claude" && status.ai.anthropic ? (
-                    <Badge variant="secondary" className="text-[10px]">
-                      Active
-                    </Badge>
-                  ) : null
-                }
               />
               <Separator />
               <CredentialRow
                 label="OpenAI"
                 envVar="OPENAI_API_KEY"
                 configured={status.ai.openai}
-                extra={
-                  status.ai.provider === "openai" && status.ai.openai ? (
-                    <Badge variant="secondary" className="text-[10px]">
-                      Active
-                    </Badge>
-                  ) : null
-                }
               />
               <Separator />
-              <div className="flex items-center justify-between py-2">
-                <div>
-                  <p className="text-sm font-medium">Active Provider</p>
-                  <p className="font-mono text-xs text-muted-foreground">
-                    AI_PROVIDER
-                  </p>
-                </div>
-                <Badge variant="outline">{status.ai.provider}</Badge>
-              </div>
+              <AiPreferences
+                hasAnthropic={status.ai.anthropic}
+                hasOpenai={status.ai.openai}
+              />
             </CardContent>
           </Card>
 
@@ -344,9 +473,7 @@ export default function CredentialsPage() {
                 <Database className="h-5 w-5 text-muted-foreground" />
                 <CardTitle>Infrastructure</CardTitle>
               </div>
-              <CardDescription>
-                Caching and storage services
-              </CardDescription>
+              <CardDescription>Caching and storage services</CardDescription>
             </CardHeader>
             <CardContent>
               <CredentialRow
@@ -364,7 +491,9 @@ export default function CredentialsPage() {
                 <Shield className="h-5 w-5 text-muted-foreground" />
                 <CardTitle>Authentication</CardTitle>
               </div>
-              <CardDescription>Session and auth configuration</CardDescription>
+              <CardDescription>
+                Session and auth configuration
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-1">
               <CredentialRow
@@ -387,8 +516,8 @@ export default function CredentialsPage() {
 
           {/* Help text */}
           <p className="text-center text-xs text-muted-foreground">
-            API keys are set via environment variables in your deployment platform.
-            Service accounts (Discogs, Spotify) can be connected above.
+            API keys are set via environment variables in your deployment
+            platform. Service accounts and AI preferences can be managed above.
           </p>
         </>
       ) : null}

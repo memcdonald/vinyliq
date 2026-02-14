@@ -2,7 +2,7 @@ import { z } from "zod";
 import { eq, and, desc } from "drizzle-orm";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../init";
 import { db } from "@/server/db";
-import { aiEvaluations, albums, collectionItems } from "@/server/db/schema";
+import { aiEvaluations, albums, collectionItems, user } from "@/server/db/schema";
 import { getAIProvider, isAIConfigured } from "@/server/services/ai";
 import { getTasteProfile, topN } from "@/server/recommendation/taste-profile";
 import type { AlbumEvaluationInput } from "@/server/services/ai";
@@ -42,8 +42,14 @@ export const aiRouter = createTRPCRouter({
         }
       }
 
+      // Get user's preferred provider
+      const [userRow] = await db
+        .select({ preferredAiProvider: user.preferredAiProvider })
+        .from(user)
+        .where(eq(user.id, ctx.userId));
+
       // Get AI provider
-      const provider = getAIProvider();
+      const provider = getAIProvider(userRow?.preferredAiProvider);
       if (!provider) {
         throw new Error("No AI provider configured");
       }

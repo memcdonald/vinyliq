@@ -124,6 +124,47 @@ export const settingsRouter = createTRPCRouter({
   }),
 
   // -------------------------------------------------------------------------
+  // AI preferences
+  // -------------------------------------------------------------------------
+  getAiPreferences: protectedProcedure.query(async ({ ctx }) => {
+    const [row] = await db
+      .select({
+        preferredAiProvider: user.preferredAiProvider,
+        chatSystemPrompt: user.chatSystemPrompt,
+      })
+      .from(user)
+      .where(eq(user.id, ctx.userId));
+
+    return {
+      provider: row?.preferredAiProvider ?? process.env.AI_PROVIDER ?? "claude",
+      chatSystemPrompt: row?.chatSystemPrompt ?? null,
+    };
+  }),
+
+  updateAiPreferences: protectedProcedure
+    .input(
+      z.object({
+        provider: z.enum(["claude", "openai"]).optional(),
+        chatSystemPrompt: z.string().max(4000).nullable().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const updates: Record<string, unknown> = { updatedAt: new Date() };
+      if (input.provider !== undefined) {
+        updates.preferredAiProvider = input.provider;
+      }
+      if (input.chatSystemPrompt !== undefined) {
+        updates.chatSystemPrompt = input.chatSystemPrompt;
+      }
+      await db
+        .update(user)
+        .set(updates)
+        .where(eq(user.id, ctx.userId));
+
+      return { success: true };
+    }),
+
+  // -------------------------------------------------------------------------
   // Discogs OAuth 1.0a — Request Token step
   // -------------------------------------------------------------------------
   getDiscogsAuthUrl: protectedProcedure.query(async () => {

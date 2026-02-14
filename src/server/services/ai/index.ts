@@ -5,8 +5,8 @@ import { env } from "@/lib/env";
 
 export type { AlbumEvaluationInput, AlbumEvaluationResult, AIProvider } from "./types";
 
-export function getAIProvider(): AIProvider | null {
-  const provider = env.AI_PROVIDER;
+export function getAIProvider(preferredProvider?: string | null): AIProvider | null {
+  const provider = preferredProvider ?? env.AI_PROVIDER;
 
   if (provider === "openai" && env.OPENAI_API_KEY) {
     return new OpenAIProvider();
