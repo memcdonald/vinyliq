@@ -5,7 +5,7 @@ import { TRPCError } from "@trpc/server";
 
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { db } from "@/server/db";
-import { users } from "@/server/db/schema";
+import { user } from "@/server/db/schema";
 import { setOAuthTemp } from "@/server/auth/oauth-store";
 import {
   generatePKCE,
@@ -29,24 +29,24 @@ export const settingsRouter = createTRPCRouter({
   // Connected accounts status
   // -------------------------------------------------------------------------
   getConnectedAccounts: protectedProcedure.query(async ({ ctx }) => {
-    const [user] = await db
+    const [row] = await db
       .select({
-        discogsUsername: users.discogsUsername,
-        discogsAccessToken: users.discogsAccessToken,
-        spotifyAccessToken: users.spotifyAccessToken,
-        spotifyTokenExpiresAt: users.spotifyTokenExpiresAt,
+        discogsUsername: user.discogsUsername,
+        discogsAccessToken: user.discogsAccessToken,
+        spotifyAccessToken: user.spotifyAccessToken,
+        spotifyTokenExpiresAt: user.spotifyTokenExpiresAt,
       })
-      .from(users)
-      .where(eq(users.id, ctx.userId));
+      .from(user)
+      .where(eq(user.id, ctx.userId));
 
     return {
       discogs: {
-        connected: !!user?.discogsAccessToken,
-        username: user?.discogsUsername ?? null,
+        connected: !!row?.discogsAccessToken,
+        username: row?.discogsUsername ?? null,
       },
       spotify: {
-        connected: !!user?.spotifyAccessToken,
-        expiresAt: user?.spotifyTokenExpiresAt ?? null,
+        connected: !!row?.spotifyAccessToken,
+        expiresAt: row?.spotifyTokenExpiresAt ?? null,
       },
     };
   }),
@@ -56,14 +56,14 @@ export const settingsRouter = createTRPCRouter({
   // -------------------------------------------------------------------------
   disconnectDiscogs: protectedProcedure.mutation(async ({ ctx }) => {
     await db
-      .update(users)
+      .update(user)
       .set({
         discogsUsername: null,
         discogsAccessToken: null,
         discogsAccessTokenSecret: null,
         updatedAt: new Date(),
       })
-      .where(eq(users.id, ctx.userId));
+      .where(eq(user.id, ctx.userId));
 
     return { success: true };
   }),
@@ -73,14 +73,14 @@ export const settingsRouter = createTRPCRouter({
   // -------------------------------------------------------------------------
   disconnectSpotify: protectedProcedure.mutation(async ({ ctx }) => {
     await db
-      .update(users)
+      .update(user)
       .set({
         spotifyAccessToken: null,
         spotifyRefreshToken: null,
         spotifyTokenExpiresAt: null,
         updatedAt: new Date(),
       })
-      .where(eq(users.id, ctx.userId));
+      .where(eq(user.id, ctx.userId));
 
     return { success: true };
   }),
@@ -171,19 +171,19 @@ export const settingsRouter = createTRPCRouter({
   // -------------------------------------------------------------------------
   importDiscogsCollection: protectedProcedure.mutation(async ({ ctx }) => {
     // Get user's Discogs credentials
-    const [user] = await db
+    const [row] = await db
       .select({
-        discogsUsername: users.discogsUsername,
-        discogsAccessToken: users.discogsAccessToken,
-        discogsAccessTokenSecret: users.discogsAccessTokenSecret,
+        discogsUsername: user.discogsUsername,
+        discogsAccessToken: user.discogsAccessToken,
+        discogsAccessTokenSecret: user.discogsAccessTokenSecret,
       })
-      .from(users)
-      .where(eq(users.id, ctx.userId));
+      .from(user)
+      .where(eq(user.id, ctx.userId));
 
     if (
-      !user?.discogsAccessToken ||
-      !user?.discogsAccessTokenSecret ||
-      !user?.discogsUsername
+      !row?.discogsAccessToken ||
+      !row?.discogsAccessTokenSecret ||
+      !row?.discogsUsername
     ) {
       throw new TRPCError({
         code: "BAD_REQUEST",
@@ -194,9 +194,9 @@ export const settingsRouter = createTRPCRouter({
     // Start import asynchronously (fire and forget)
     importDiscogsCollection(
       ctx.userId,
-      user.discogsUsername,
-      user.discogsAccessToken,
-      user.discogsAccessTokenSecret,
+      row.discogsUsername,
+      row.discogsAccessToken,
+      row.discogsAccessTokenSecret,
     ).catch(console.error);
 
     return { status: "started" as const, message: "Import started" };
@@ -206,15 +206,15 @@ export const settingsRouter = createTRPCRouter({
   // Import — Spotify library
   // -------------------------------------------------------------------------
   importSpotifyLibrary: protectedProcedure.mutation(async ({ ctx }) => {
-    const [user] = await db
+    const [row] = await db
       .select({
-        spotifyAccessToken: users.spotifyAccessToken,
-        spotifyRefreshToken: users.spotifyRefreshToken,
+        spotifyAccessToken: user.spotifyAccessToken,
+        spotifyRefreshToken: user.spotifyRefreshToken,
       })
-      .from(users)
-      .where(eq(users.id, ctx.userId));
+      .from(user)
+      .where(eq(user.id, ctx.userId));
 
-    if (!user?.spotifyAccessToken || !user?.spotifyRefreshToken) {
+    if (!row?.spotifyAccessToken || !row?.spotifyRefreshToken) {
       throw new TRPCError({
         code: "BAD_REQUEST",
         message: "Spotify account not connected",
@@ -224,8 +224,8 @@ export const settingsRouter = createTRPCRouter({
     // Start import asynchronously (fire and forget)
     runSpotifyImport(
       ctx.userId,
-      user.spotifyAccessToken,
-      user.spotifyRefreshToken,
+      row.spotifyAccessToken,
+      row.spotifyRefreshToken,
     ).catch(console.error);
 
     return { status: "started" as const, message: "Import started" };

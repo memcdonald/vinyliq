@@ -175,10 +175,14 @@ export const labels = pgTable(
 );
 
 // ---------------------------------------------------------------------------
-// users - App users (Better Auth manages its own tables; extra fields here)
+// user - Better Auth user table + custom fields
 // ---------------------------------------------------------------------------
-export const users = pgTable("users", {
+export const user = pgTable("user", {
   id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  emailVerified: boolean("email_verified").notNull().default(false),
+  image: text("image"),
   discogsUsername: text("discogs_username"),
   discogsAccessToken: text("discogs_access_token"),
   discogsAccessTokenSecret: text("discogs_access_token_secret"),
@@ -187,6 +191,71 @@ export const users = pgTable("users", {
   spotifyTokenExpiresAt: timestamp("spotify_token_expires_at", {
     withTimezone: true,
   }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .default(sql`now()`),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .default(sql`now()`),
+});
+
+// ---------------------------------------------------------------------------
+// session - Better Auth session table
+// ---------------------------------------------------------------------------
+export const session = pgTable("session", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id),
+  token: text("token").notNull().unique(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .default(sql`now()`),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .default(sql`now()`),
+});
+
+// ---------------------------------------------------------------------------
+// account - Better Auth account table
+// ---------------------------------------------------------------------------
+export const account = pgTable("account", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id),
+  accountId: text("account_id").notNull(),
+  providerId: text("provider_id").notNull(),
+  accessToken: text("access_token"),
+  refreshToken: text("refresh_token"),
+  accessTokenExpiresAt: timestamp("access_token_expires_at", {
+    withTimezone: true,
+  }),
+  refreshTokenExpiresAt: timestamp("refresh_token_expires_at", {
+    withTimezone: true,
+  }),
+  scope: text("scope"),
+  idToken: text("id_token"),
+  password: text("password"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .default(sql`now()`),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .default(sql`now()`),
+});
+
+// ---------------------------------------------------------------------------
+// verification - Better Auth verification table
+// ---------------------------------------------------------------------------
+export const verification = pgTable("verification", {
+  id: text("id").primaryKey(),
+  identifier: text("identifier").notNull(),
+  value: text("value").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .default(sql`now()`),
@@ -206,7 +275,7 @@ export const collectionItems = pgTable(
       .default(sql`gen_random_uuid()`),
     userId: text("user_id")
       .notNull()
-      .references(() => users.id),
+      .references(() => user.id),
     albumId: uuid("album_id")
       .notNull()
       .references(() => albums.id),
@@ -239,7 +308,7 @@ export const userTasteProfiles = pgTable(
       .default(sql`gen_random_uuid()`),
     userId: text("user_id")
       .notNull()
-      .references(() => users.id)
+      .references(() => user.id)
       .unique(),
     genreWeights: jsonb("genre_weights").default({}),
     styleWeights: jsonb("style_weights").default({}),
@@ -270,7 +339,7 @@ export const recommendations = pgTable(
       .default(sql`gen_random_uuid()`),
     userId: text("user_id")
       .notNull()
-      .references(() => users.id),
+      .references(() => user.id),
     albumId: uuid("album_id")
       .notNull()
       .references(() => albums.id),
@@ -311,8 +380,8 @@ export type NewAlbumArtist = typeof albumArtists.$inferInsert;
 export type Label = typeof labels.$inferSelect;
 export type NewLabel = typeof labels.$inferInsert;
 
-export type User = typeof users.$inferSelect;
-export type NewUser = typeof users.$inferInsert;
+export type User = typeof user.$inferSelect;
+export type NewUser = typeof user.$inferInsert;
 
 export type CollectionItem = typeof collectionItems.$inferSelect;
 export type NewCollectionItem = typeof collectionItems.$inferInsert;

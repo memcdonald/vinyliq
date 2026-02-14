@@ -10,7 +10,7 @@
  */
 
 import { db } from '@/server/db';
-import { albums, artists, albumArtists, collectionItems, users } from '@/server/db/schema';
+import { albums, artists, albumArtists, collectionItems, user } from '@/server/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { spotifyClient } from './client';
 import { refreshSpotifyToken } from './auth';
@@ -95,14 +95,14 @@ export async function importSpotifyLibrary(
 
             // Persist the refreshed tokens for future use
             await db
-              .update(users)
+              .update(user)
               .set({
                 spotifyAccessToken: newTokens.access_token,
                 spotifyRefreshToken: newTokens.refresh_token ?? refreshToken,
                 spotifyTokenExpiresAt: new Date(Date.now() + newTokens.expires_in * 1000),
                 updatedAt: new Date(),
               })
-              .where(eq(users.id, userId));
+              .where(eq(user.id, userId));
 
             // Retry this page with the fresh token
             const page = await spotifyClient.getUserSavedAlbums(token, 50, offset);

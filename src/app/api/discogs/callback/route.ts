@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 
 import { auth } from "@/server/auth";
 import { db } from "@/server/db";
-import { users } from "@/server/db/schema";
+import { user } from "@/server/db/schema";
 import { getOAuthTemp } from "@/server/auth/oauth-store";
 
 export async function GET(request: NextRequest) {
@@ -134,14 +134,14 @@ export async function GET(request: NextRequest) {
     // 6. Store tokens in user record
     // -----------------------------------------------------------------------
     await db
-      .update(users)
+      .update(user)
       .set({
         discogsUsername,
         discogsAccessToken: accessToken,
         discogsAccessTokenSecret: accessTokenSecret,
         updatedAt: new Date(),
       })
-      .where(eq(users.id, session.user.id));
+      .where(eq(user.id, session.user.id));
 
     return NextResponse.redirect(`${baseUrl}/settings?discogs=connected`);
   } catch (error) {

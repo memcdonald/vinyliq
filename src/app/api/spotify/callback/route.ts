@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 
 import { auth } from "@/server/auth";
 import { db } from "@/server/db";
-import { users } from "@/server/db/schema";
+import { user } from "@/server/db/schema";
 import { getOAuthTemp } from "@/server/auth/oauth-store";
 import { exchangeSpotifyCode } from "@/server/services/spotify/auth";
 
@@ -68,14 +68,14 @@ export async function GET(request: NextRequest) {
     );
 
     await db
-      .update(users)
+      .update(user)
       .set({
         spotifyAccessToken: tokenResponse.access_token,
         spotifyRefreshToken: tokenResponse.refresh_token ?? null,
         spotifyTokenExpiresAt: expiresAt,
         updatedAt: new Date(),
       })
-      .where(eq(users.id, session.user.id));
+      .where(eq(user.id, session.user.id));
 
     return NextResponse.redirect(`${baseUrl}/settings?spotify=connected`);
   } catch (error) {
