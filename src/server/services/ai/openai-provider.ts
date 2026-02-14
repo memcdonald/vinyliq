@@ -1,10 +1,15 @@
 import type { AIProvider, AlbumEvaluationInput, AlbumEvaluationResult } from "./types";
 import { buildEvaluationPrompt } from "./prompt";
-import { env } from "@/lib/env";
 
 export class OpenAIProvider implements AIProvider {
+  private apiKey: string;
+
+  constructor(apiKey: string) {
+    this.apiKey = apiKey;
+  }
+
   async evaluate(input: AlbumEvaluationInput): Promise<AlbumEvaluationResult> {
-    const apiKey = env.OPENAI_API_KEY;
+    const apiKey = this.apiKey;
     if (!apiKey) {
       throw new Error("OPENAI_API_KEY not configured");
     }

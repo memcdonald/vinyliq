@@ -193,6 +193,9 @@ export const user = pgTable("user", {
   }),
   preferredAiProvider: text("preferred_ai_provider"), // 'claude' | 'openai' | null (use env default)
   chatSystemPrompt: text("chat_system_prompt"), // custom system prompt override
+  anthropicApiKey: text("anthropic_api_key"), // user-provided API key (overrides env)
+  openaiApiKey: text("openai_api_key"), // user-provided API key (overrides env)
+  recommendationPrompt: text("recommendation_prompt"), // custom prompt for AI recommendations
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .default(sql`now()`),

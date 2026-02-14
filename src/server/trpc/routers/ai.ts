@@ -3,7 +3,8 @@ import { eq, and, desc } from "drizzle-orm";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../init";
 import { db } from "@/server/db";
 import { aiEvaluations, albums, collectionItems, user } from "@/server/db/schema";
-import { getAIProvider, isAIConfigured } from "@/server/services/ai";
+import { getAIProvider, isAIConfigured, isAIConfiguredWithKeys } from "@/server/services/ai";
+import { getUserApiKeys } from "@/server/services/ai/keys";
 import { getTasteProfile, topN } from "@/server/recommendation/taste-profile";
 import type { AlbumEvaluationInput } from "@/server/services/ai";
 
@@ -12,6 +13,11 @@ const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 export const aiRouter = createTRPCRouter({
   isConfigured: publicProcedure.query(() => {
     return { configured: isAIConfigured() };
+  }),
+
+  isConfiguredForUser: protectedProcedure.query(async ({ ctx }) => {
+    const keys = await getUserApiKeys(ctx.userId);
+    return { configured: isAIConfiguredWithKeys(keys) };
   }),
 
   evaluateAlbum: protectedProcedure
@@ -42,16 +48,18 @@ export const aiRouter = createTRPCRouter({
         }
       }
 
-      // Get user's preferred provider
+      // Get user's preferred provider and resolved API keys
       const [userRow] = await db
         .select({ preferredAiProvider: user.preferredAiProvider })
         .from(user)
         .where(eq(user.id, ctx.userId));
 
-      // Get AI provider
-      const provider = getAIProvider(userRow?.preferredAiProvider);
+      const keys = await getUserApiKeys(ctx.userId);
+
+      // Get AI provider with user's keys
+      const provider = getAIProvider(userRow?.preferredAiProvider, keys);
       if (!provider) {
-        throw new Error("No AI provider configured");
+        throw new Error("No AI provider configured. Add an API key on the Credentials page.");
       }
 
       // Fetch album data
@@ -114,7 +122,7 @@ export const aiRouter = createTRPCRouter({
       const result = await provider.evaluate(evaluationInput);
 
       // Determine provider name
-      const providerName = process.env.AI_PROVIDER === "openai" ? "openai" : "claude";
+      const providerName = userRow?.preferredAiProvider === "openai" ? "openai" : "claude";
 
       // Upsert cache
       if (cached) {

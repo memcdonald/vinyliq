@@ -6,6 +6,7 @@ import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { db } from "@/server/db";
 import { user } from "@/server/db/schema";
+import { maskApiKey } from "@/server/services/ai/keys";
 import { setOAuthTemp } from "@/server/auth/oauth-store";
 import {
   generatePKCE,
@@ -34,9 +35,14 @@ export const settingsRouter = createTRPCRouter({
         discogsAccessToken: user.discogsAccessToken,
         discogsUsername: user.discogsUsername,
         spotifyAccessToken: user.spotifyAccessToken,
+        anthropicApiKey: user.anthropicApiKey,
+        openaiApiKey: user.openaiApiKey,
       })
       .from(user)
       .where(eq(user.id, ctx.userId));
+
+    const hasAnthropic = !!(row?.anthropicApiKey || process.env.ANTHROPIC_API_KEY);
+    const hasOpenai = !!(row?.openaiApiKey || process.env.OPENAI_API_KEY);
 
     return {
       discogs: {
@@ -49,9 +55,13 @@ export const settingsRouter = createTRPCRouter({
         connected: !!row?.spotifyAccessToken,
       },
       ai: {
-        anthropic: !!process.env.ANTHROPIC_API_KEY,
-        openai: !!process.env.OPENAI_API_KEY,
+        anthropic: hasAnthropic,
+        openai: hasOpenai,
         provider: process.env.AI_PROVIDER ?? "claude",
+        anthropicMasked: maskApiKey(row?.anthropicApiKey),
+        openaiMasked: maskApiKey(row?.openaiApiKey),
+        anthropicFromEnv: !!process.env.ANTHROPIC_API_KEY,
+        openaiFromEnv: !!process.env.OPENAI_API_KEY,
       },
       cache: {
         redis: !!process.env.UPSTASH_REDIS_REST_URL,
@@ -131,6 +141,7 @@ export const settingsRouter = createTRPCRouter({
       .select({
         preferredAiProvider: user.preferredAiProvider,
         chatSystemPrompt: user.chatSystemPrompt,
+        recommendationPrompt: user.recommendationPrompt,
       })
       .from(user)
       .where(eq(user.id, ctx.userId));
@@ -138,6 +149,7 @@ export const settingsRouter = createTRPCRouter({
     return {
       provider: row?.preferredAiProvider ?? process.env.AI_PROVIDER ?? "claude",
       chatSystemPrompt: row?.chatSystemPrompt ?? null,
+      recommendationPrompt: row?.recommendationPrompt ?? null,
     };
   }),
 
@@ -146,6 +158,7 @@ export const settingsRouter = createTRPCRouter({
       z.object({
         provider: z.enum(["claude", "openai"]).optional(),
         chatSystemPrompt: z.string().max(4000).nullable().optional(),
+        recommendationPrompt: z.string().max(4000).nullable().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -155,6 +168,55 @@ export const settingsRouter = createTRPCRouter({
       }
       if (input.chatSystemPrompt !== undefined) {
         updates.chatSystemPrompt = input.chatSystemPrompt;
+      }
+      if (input.recommendationPrompt !== undefined) {
+        updates.recommendationPrompt = input.recommendationPrompt;
+      }
+      await db
+        .update(user)
+        .set(updates)
+        .where(eq(user.id, ctx.userId));
+
+      return { success: true };
+    }),
+
+  // -------------------------------------------------------------------------
+  // API Key management
+  // -------------------------------------------------------------------------
+  saveApiKey: protectedProcedure
+    .input(
+      z.object({
+        provider: z.enum(["anthropic", "openai"]),
+        apiKey: z.string().min(1).max(256),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const updates: Record<string, unknown> = { updatedAt: new Date() };
+      if (input.provider === "anthropic") {
+        updates.anthropicApiKey = input.apiKey.trim();
+      } else {
+        updates.openaiApiKey = input.apiKey.trim();
+      }
+      await db
+        .update(user)
+        .set(updates)
+        .where(eq(user.id, ctx.userId));
+
+      return { success: true };
+    }),
+
+  removeApiKey: protectedProcedure
+    .input(
+      z.object({
+        provider: z.enum(["anthropic", "openai"]),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const updates: Record<string, unknown> = { updatedAt: new Date() };
+      if (input.provider === "anthropic") {
+        updates.anthropicApiKey = null;
+      } else {
+        updates.openaiApiKey = null;
       }
       await db
         .update(user)

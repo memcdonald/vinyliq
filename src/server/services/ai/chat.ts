@@ -3,6 +3,7 @@ import { db } from "@/server/db";
 import { chatMessages, collectionItems, albums, user } from "@/server/db/schema";
 import { getTasteProfile, topN } from "@/server/recommendation/taste-profile";
 import { env } from "@/lib/env";
+import { getUserApiKeys } from "./keys";
 
 const MAX_HISTORY = 20;
 
@@ -47,20 +48,23 @@ export async function sendChatMessage(
   // Build context about user's collection
   const context = await buildUserContext(userId, prefs?.chatSystemPrompt ?? null);
 
+  // Resolve API keys (user DB → env fallback)
+  const keys = await getUserApiKeys(userId);
+
   // Determine which provider to use
   const preferred = prefs?.preferredAiProvider ?? env.AI_PROVIDER;
 
   // Get AI response
   let responseText: string;
-  if (preferred === "openai" && env.OPENAI_API_KEY) {
-    responseText = await callOpenAI(context, history);
-  } else if (env.ANTHROPIC_API_KEY) {
-    responseText = await callClaude(context, history);
-  } else if (env.OPENAI_API_KEY) {
-    responseText = await callOpenAI(context, history);
+  if (preferred === "openai" && keys.openaiKey) {
+    responseText = await callOpenAI(keys.openaiKey, context, history);
+  } else if (keys.anthropicKey) {
+    responseText = await callClaude(keys.anthropicKey, context, history);
+  } else if (keys.openaiKey) {
+    responseText = await callOpenAI(keys.openaiKey, context, history);
   } else {
     responseText =
-      "AI is not configured. Please add an ANTHROPIC_API_KEY or OPENAI_API_KEY to use chat.";
+      "AI is not configured. Please add an API key on the Credentials page.";
   }
 
   // Store assistant response
@@ -140,6 +144,7 @@ ${collectorProfile}
 }
 
 async function callClaude(
+  apiKey: string,
   systemPrompt: string,
   history: { role: string; content: string }[],
 ): Promise<string> {
@@ -152,7 +157,7 @@ async function callClaude(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-api-key": env.ANTHROPIC_API_KEY,
+      "x-api-key": apiKey,
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
@@ -173,6 +178,7 @@ async function callClaude(
 }
 
 async function callOpenAI(
+  apiKey: string,
   systemPrompt: string,
   history: { role: string; content: string }[],
 ): Promise<string> {
@@ -188,7 +194,7 @@ async function callOpenAI(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
       model: "gpt-4o-mini",

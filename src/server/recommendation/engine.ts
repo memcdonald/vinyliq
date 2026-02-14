@@ -5,6 +5,7 @@ import { getTasteProfile, updateTasteProfile } from './taste-profile';
 import { contentBasedRecommendations } from './strategies/content-based';
 import { graphRecommendations } from './strategies/graph-traversal';
 import { collaborativeRecommendations } from './strategies/collaborative';
+import { aiRecommendations } from './ai-recommend';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -19,6 +20,7 @@ interface AggregatedRecommendation {
     content: number;
     graph: number;
     collaborative: number;
+    ai: number;
   };
 }
 
@@ -41,9 +43,10 @@ export interface RecommendationGroup {
 
 // Strategy weights for final score aggregation
 const STRATEGY_WEIGHTS = {
-  content: 0.4,
-  collaborative: 0.3,
-  graph: 0.3,
+  content: 0.25,
+  collaborative: 0.2,
+  graph: 0.2,
+  ai: 0.35,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -64,17 +67,19 @@ export async function generateRecommendations(
   // Step 1: Get or compute the taste profile
   const tasteProfile = await updateTasteProfile(userId);
 
-  // Step 2: Run all three strategies in parallel
-  const [contentResults, graphResults, collabResults] = await Promise.allSettled([
+  // Step 2: Run all strategies in parallel (AI + algorithmic)
+  const [contentResults, graphResults, collabResults, aiResults] = await Promise.allSettled([
     contentBasedRecommendations(userId, tasteProfile, limit),
     graphRecommendations(userId, tasteProfile, limit),
     collaborativeRecommendations(userId, tasteProfile, limit),
+    aiRecommendations(userId, Math.min(limit, 20)),
   ]);
 
   // Collect results (graceful fallback if any strategy fails)
   const content = contentResults.status === 'fulfilled' ? contentResults.value : [];
   const graph = graphResults.status === 'fulfilled' ? graphResults.value : [];
   const collab = collabResults.status === 'fulfilled' ? collabResults.value : [];
+  const ai = aiResults.status === 'fulfilled' ? aiResults.value : [];
 
   if (contentResults.status === 'rejected') {
     console.log('[RecEngine] Content strategy failed:', contentResults.reason);
@@ -85,29 +90,39 @@ export async function generateRecommendations(
   if (collabResults.status === 'rejected') {
     console.log('[RecEngine] Collaborative strategy failed:', collabResults.reason);
   }
+  if (aiResults.status === 'rejected') {
+    console.log('[RecEngine] AI strategy failed:', aiResults.reason);
+  }
 
   // Step 3: Aggregate scores per album
   const albumScores = new Map<string, {
     content: { score: number; explanation: string } | null;
     graph: { score: number; explanation: string } | null;
     collaborative: { score: number; explanation: string } | null;
+    ai: { score: number; explanation: string } | null;
   }>();
 
   for (const rec of content) {
-    const entry = albumScores.get(rec.albumId) ?? { content: null, graph: null, collaborative: null };
+    const entry = albumScores.get(rec.albumId) ?? { content: null, graph: null, collaborative: null, ai: null };
     entry.content = { score: rec.score, explanation: rec.explanation };
     albumScores.set(rec.albumId, entry);
   }
 
   for (const rec of graph) {
-    const entry = albumScores.get(rec.albumId) ?? { content: null, graph: null, collaborative: null };
+    const entry = albumScores.get(rec.albumId) ?? { content: null, graph: null, collaborative: null, ai: null };
     entry.graph = { score: rec.score, explanation: rec.explanation };
     albumScores.set(rec.albumId, entry);
   }
 
   for (const rec of collab) {
-    const entry = albumScores.get(rec.albumId) ?? { content: null, graph: null, collaborative: null };
+    const entry = albumScores.get(rec.albumId) ?? { content: null, graph: null, collaborative: null, ai: null };
     entry.collaborative = { score: rec.score, explanation: rec.explanation };
+    albumScores.set(rec.albumId, entry);
+  }
+
+  for (const rec of ai) {
+    const entry = albumScores.get(rec.albumId) ?? { content: null, graph: null, collaborative: null, ai: null };
+    entry.ai = { score: rec.score, explanation: rec.explanation };
     albumScores.set(rec.albumId, entry);
   }
 
@@ -118,21 +133,29 @@ export async function generateRecommendations(
     const contentScore = scores.content?.score ?? 0;
     const graphScore = scores.graph?.score ?? 0;
     const collabScore = scores.collaborative?.score ?? 0;
+    const aiScore = scores.ai?.score ?? 0;
 
     const finalScore =
       contentScore * STRATEGY_WEIGHTS.content +
       graphScore * STRATEGY_WEIGHTS.graph +
-      collabScore * STRATEGY_WEIGHTS.collaborative;
+      collabScore * STRATEGY_WEIGHTS.collaborative +
+      aiScore * STRATEGY_WEIGHTS.ai;
 
     // Multi-strategy bonus: albums appearing in 2+ strategies get a 10% boost
-    const strategyCount = [scores.content, scores.graph, scores.collaborative].filter(Boolean).length;
+    const strategyCount = [scores.content, scores.graph, scores.collaborative, scores.ai].filter(Boolean).length;
     const boostedScore = strategyCount >= 2 ? finalScore * 1.1 : finalScore;
 
-    // Pick the best strategy's explanation
+    // Pick the best strategy's explanation (prefer AI explanations when available)
     let bestStrategy = 'content';
     let bestExplanation = 'Based on your listening preferences';
     let bestStrategyScore = 0;
 
+    // AI explanations are richer, so prefer them when score is close
+    if (scores.ai && scores.ai.score > 0) {
+      bestStrategyScore = scores.ai.score;
+      bestStrategy = 'ai';
+      bestExplanation = scores.ai.explanation;
+    }
     if (scores.content && scores.content.score > bestStrategyScore) {
       bestStrategyScore = scores.content.score;
       bestStrategy = 'content';
@@ -148,6 +171,10 @@ export async function generateRecommendations(
       bestStrategy = 'collaborative';
       bestExplanation = scores.collaborative.explanation;
     }
+    // If AI scored but wasn't the top scorer, still use its explanation if it exists
+    if (scores.ai && bestStrategy !== 'ai') {
+      bestExplanation = scores.ai.explanation;
+    }
 
     aggregated.push({
       albumId,
@@ -158,6 +185,7 @@ export async function generateRecommendations(
         content: contentScore,
         graph: graphScore,
         collaborative: collabScore,
+        ai: aiScore,
       },
     });
   }
@@ -355,6 +383,7 @@ async function buildGroups(
 
   // Strategy-specific groups
   const strategyTitles: Record<string, string> = {
+    ai: 'AI Curated For You',
     content: 'Based On Your Taste',
     graph: 'Artist Connections',
     collaborative: 'Popular With Collectors Like You',
