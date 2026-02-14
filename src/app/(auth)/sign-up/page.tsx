@@ -31,13 +31,13 @@ export default function SignUpPage() {
     try {
       const result = await signUp.email({ name, email, password });
       if (result.error) {
-        setError(result.error.message ?? "Sign up failed");
+        setError(result.error.message ?? result.error.statusText ?? `Sign up failed (${result.error.status})`);
       } else {
         router.push("/search");
         router.refresh();
       }
-    } catch {
-      setError("An unexpected error occurred");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unexpected error occurred");
     } finally {
       setLoading(false);
     }
