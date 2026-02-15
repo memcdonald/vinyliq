@@ -5,7 +5,7 @@ import { TRPCError } from "@trpc/server";
 
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { db } from "@/server/db";
-import { user } from "@/server/db/schema";
+import { user, userTasteProfiles } from "@/server/db/schema";
 import { maskApiKey } from "@/server/services/ai/keys";
 import { setOAuthTemp } from "@/server/auth/oauth-store";
 import {
@@ -20,6 +20,8 @@ import {
   importSpotifyLibrary as runSpotifyImport,
   getSpotifyImportProgress,
 } from "@/server/services/spotify/import";
+import { seedTasteFromSpotify } from "@/server/services/spotify/taste-seed";
+import { updateTasteProfile } from "@/server/recommendation/taste-profile";
 
 // ---------------------------------------------------------------------------
 // Settings router
@@ -386,4 +388,58 @@ export const settingsRouter = createTRPCRouter({
       }
       return null;
     }),
+
+  // -------------------------------------------------------------------------
+  // Taste profile
+  // -------------------------------------------------------------------------
+  refreshTasteProfile: protectedProcedure.mutation(async ({ ctx }) => {
+    // Recompute from collection
+    const profile = await updateTasteProfile(ctx.userId);
+
+    // Enrich with Spotify listening data if connected
+    try {
+      await seedTasteFromSpotify(ctx.userId);
+    } catch {
+      // Spotify not connected or token expired — that's fine
+    }
+
+    const topGenres = Object.entries(profile.genreWeights)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([g, w]) => ({ genre: g, weight: Math.round(w * 100) }));
+
+    const topArtists = Object.entries(profile.artistWeights)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([a]) => a);
+
+    return { topGenres, topArtists };
+  }),
+
+  getTasteProfile: protectedProcedure.query(async ({ ctx }) => {
+    const [existing] = await db
+      .select()
+      .from(userTasteProfiles)
+      .where(eq(userTasteProfiles.userId, ctx.userId))
+      .limit(1);
+
+    if (!existing) {
+      return null;
+    }
+
+    const genres = existing.genreWeights as Record<string, number> | null;
+    const artistMap = existing.artistWeights as Record<string, number> | null;
+
+    return {
+      topGenres: Object.entries(genres ?? {})
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 15)
+        .map(([g, w]) => ({ genre: g, weight: Math.round(w * 100) })),
+      topArtists: Object.entries(artistMap ?? {})
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 15)
+        .map(([a]) => a),
+      computedAt: existing.computedAt,
+    };
+  }),
 });

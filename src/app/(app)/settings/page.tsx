@@ -10,6 +10,8 @@ import {
   Music,
   Disc3,
   Loader2,
+  RefreshCw,
+  Brain,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -331,7 +333,112 @@ function SettingsContent() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Taste Profile Section */}
+      <TasteProfileCard />
     </div>
+  );
+}
+
+function TasteProfileCard() {
+  const { data: taste, isLoading } = trpc.settings.getTasteProfile.useQuery();
+  const utils = trpc.useUtils();
+
+  const refreshMutation = trpc.settings.refreshTasteProfile.useMutation({
+    onSuccess: (data) => {
+      toast.success(
+        `Taste profile updated: ${data.topGenres.length} genres, ${data.topArtists.length} artists`,
+      );
+      utils.settings.getTasteProfile.invalidate();
+    },
+    onError: (error) => {
+      toast.error(`Failed to refresh: ${error.message}`);
+    },
+  });
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Brain className="size-5" />
+              Taste Profile
+            </CardTitle>
+            <CardDescription>
+              Your musical preferences — built from your collection and Spotify listening history
+            </CardDescription>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refreshMutation.mutate()}
+            disabled={refreshMutation.isPending}
+          >
+            <RefreshCw
+              className={`mr-1.5 size-4 ${refreshMutation.isPending ? "animate-spin" : ""}`}
+            />
+            Refresh
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground">Loading taste profile...</p>
+        ) : !taste ? (
+          <div className="text-center py-6">
+            <p className="text-sm text-muted-foreground mb-3">
+              No taste profile yet. Connect Spotify or add albums to your collection, then hit Refresh.
+            </p>
+            <Button
+              size="sm"
+              onClick={() => refreshMutation.mutate()}
+              disabled={refreshMutation.isPending}
+            >
+              {refreshMutation.isPending ? (
+                <Loader2 className="mr-1.5 size-4 animate-spin" />
+              ) : (
+                <Brain className="mr-1.5 size-4" />
+              )}
+              Build Taste Profile
+            </Button>
+          </div>
+        ) : (
+          <>
+            {taste.topGenres.length > 0 && (
+              <div>
+                <h4 className="text-xs font-medium text-muted-foreground mb-2">Top Genres</h4>
+                <div className="flex flex-wrap gap-1.5">
+                  {taste.topGenres.map((g) => (
+                    <Badge key={g.genre} variant="secondary" className="text-xs">
+                      {g.genre}
+                      <span className="ml-1 opacity-60">{g.weight}%</span>
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            {taste.topArtists.length > 0 && (
+              <div>
+                <h4 className="text-xs font-medium text-muted-foreground mb-2">Top Artists</h4>
+                <div className="flex flex-wrap gap-1.5">
+                  {taste.topArtists.map((a) => (
+                    <Badge key={a} variant="outline" className="text-xs">
+                      {a}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            {taste.computedAt && (
+              <p className="text-[10px] text-muted-foreground/60">
+                Last updated: {new Date(taste.computedAt).toLocaleDateString()}
+              </p>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

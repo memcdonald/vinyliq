@@ -14,6 +14,7 @@ import { albums, artists, albumArtists, collectionItems, user } from '@/server/d
 import { eq, and } from 'drizzle-orm';
 import { spotifyClient } from './client';
 import { refreshSpotifyToken } from './auth';
+import { seedTasteFromSpotify } from './taste-seed';
 import type { SpotifySavedAlbum } from './types';
 
 // ---------------------------------------------------------------------------
@@ -118,6 +119,14 @@ export async function importSpotifyLibrary(
       }
 
       offset += 50;
+    }
+
+    // Seed/enrich taste profile from Spotify top artists
+    progress.message = 'Analyzing your listening taste...';
+    try {
+      await seedTasteFromSpotify(userId);
+    } catch (err) {
+      console.error('[SpotifyImport] Taste seeding error:', err);
     }
 
     progress.status = 'completed';

@@ -6,6 +6,8 @@ import type { RawRelease } from "./types";
 import { RssAdapter } from "./rss-adapter";
 import { UrlAdapter } from "./url-adapter";
 import { computeCollectabilityForRelease } from "./collectability";
+import { batchScoreCollectability } from "./ai-collectability";
+import { getUserApiKeys } from "@/server/services/ai/keys";
 
 const rssAdapter = new RssAdapter();
 const urlAdapter = new UrlAdapter();
@@ -218,6 +220,61 @@ export async function fetchAllSources(userId: string): Promise<{ totalAdded: num
       totalAdded += result.added;
     } catch {
       console.error(`Failed to fetch data source ${source.sourceName} (${source.id})`);
+    }
+  }
+
+  // 3. AI collectability scoring for any releases that only have heuristic scores
+  if (totalAdded > 0) {
+    try {
+      const keys = await getUserApiKeys(userId);
+      if (keys.anthropicKey || keys.openaiKey) {
+        // Get recently added releases without AI-quality scores
+        const recent = await db
+          .select({
+            id: upcomingReleases.id,
+            title: upcomingReleases.title,
+            artistName: upcomingReleases.artistName,
+            labelName: upcomingReleases.labelName,
+            description: upcomingReleases.description,
+            pressRun: upcomingReleases.pressRun,
+            coloredVinyl: upcomingReleases.coloredVinyl,
+            specialPackaging: upcomingReleases.specialPackaging,
+            collectabilityScore: upcomingReleases.collectabilityScore,
+          })
+          .from(upcomingReleases)
+          .where(eq(upcomingReleases.userId, userId))
+          .orderBy(upcomingReleases.createdAt)
+          .limit(20); // Score the 20 most recent
+
+        const toScore = recent.map((r) => ({
+          title: r.title,
+          artistName: r.artistName,
+          labelName: r.labelName,
+          description: r.description,
+          pressRun: r.pressRun,
+          coloredVinyl: r.coloredVinyl,
+          specialPackaging: r.specialPackaging,
+          heuristicScore: r.collectabilityScore ?? 0,
+        }));
+
+        const aiResults = await batchScoreCollectability(toScore, keys);
+
+        for (let i = 0; i < recent.length; i++) {
+          const aiResult = aiResults[i];
+          if (aiResult) {
+            await db
+              .update(upcomingReleases)
+              .set({
+                collectabilityScore: aiResult.score,
+                collectabilityExplanation: aiResult.explanation,
+                updatedAt: new Date(),
+              })
+              .where(eq(upcomingReleases.id, recent[i].id));
+          }
+        }
+      }
+    } catch (err) {
+      console.error("AI collectability scoring failed:", err);
     }
   }
 

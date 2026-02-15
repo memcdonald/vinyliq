@@ -64,7 +64,7 @@ export function getSpotifyAuthUrl(state: string, codeChallenge: string): string 
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: clientId,
-    scope: 'user-library-read user-read-private',
+    scope: 'user-library-read user-read-private user-top-read',
     redirect_uri: redirectUri,
     state,
     code_challenge_method: 'S256',

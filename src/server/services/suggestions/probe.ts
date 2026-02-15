@@ -8,6 +8,7 @@ import {
 import { RssAdapter } from "@/server/services/releases/rss-adapter";
 import { UrlAdapter } from "@/server/services/releases/url-adapter";
 import { computeCollectability } from "@/server/services/releases/collectability";
+import { batchScoreCollectability } from "@/server/services/releases/ai-collectability";
 import { getUserApiKeys, type ResolvedKeys } from "@/server/services/ai/keys";
 import { scoreTasteMatch } from "./taste-match";
 import { batchExplain } from "./ai-explain";
@@ -134,7 +135,45 @@ async function probeSource(
 
   // Batch insert
   if (newSuggestions.length > 0) {
-    await db.insert(aiSuggestions).values(newSuggestions);
+    const inserted = await db
+      .insert(aiSuggestions)
+      .values(newSuggestions)
+      .returning({ id: aiSuggestions.id });
+
+    // AI collectability scoring (replaces heuristic-only scores)
+    if (keys && (keys.anthropicKey || keys.openaiKey)) {
+      try {
+        const toScore = newSuggestions.map((s) => ({
+          title: s.title,
+          artistName: s.artistName,
+          labelName: s.labelName,
+          description: s.description,
+          heuristicScore: s.collectabilityScore,
+        }));
+
+        const aiScores = await batchScoreCollectability(toScore, keys);
+
+        for (let i = 0; i < inserted.length; i++) {
+          const aiResult = aiScores[i];
+          if (aiResult) {
+            const newCombined =
+              newSuggestions[i].tasteScore * 0.4 +
+              (aiResult.score / 100) * 0.6;
+
+            await db
+              .update(aiSuggestions)
+              .set({
+                collectabilityScore: aiResult.score,
+                combinedScore: newCombined,
+                updatedAt: new Date(),
+              })
+              .where(eq(aiSuggestions.id, inserted[i].id));
+          }
+        }
+      } catch (err) {
+        console.error("[Probe] AI collectability scoring failed:", err);
+      }
+    }
   }
 
   // Generate AI explanations for new suggestions

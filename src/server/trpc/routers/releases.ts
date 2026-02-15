@@ -5,6 +5,8 @@ import { db } from "@/server/db";
 import { releaseSources, upcomingReleases } from "@/server/db/schema";
 import { fetchSource as fetchSourceService, fetchAllSources as fetchAllSourcesService } from "@/server/services/releases";
 import { computeCollectabilityForRelease } from "@/server/services/releases";
+import { scoreCollectabilityWithAI } from "@/server/services/releases/ai-collectability";
+import { getUserApiKeys } from "@/server/services/ai/keys";
 
 const sourceType = z.enum(["url", "rss", "manual"]);
 const releaseStatus = z.enum(["upcoming", "released", "archived"]);
@@ -350,5 +352,54 @@ export const releasesRouter = createTRPCRouter({
         .where(eq(upcomingReleases.id, input.releaseId));
 
       return result;
+    }),
+
+  aiScoreRelease: protectedProcedure
+    .input(z.object({ releaseId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const [release] = await db
+        .select()
+        .from(upcomingReleases)
+        .where(
+          and(
+            eq(upcomingReleases.id, input.releaseId),
+            eq(upcomingReleases.userId, ctx.userId),
+          ),
+        )
+        .limit(1);
+
+      if (!release) throw new Error("Release not found");
+
+      const keys = await getUserApiKeys(ctx.userId);
+      const heuristic = computeCollectabilityForRelease(release);
+
+      const aiResult = await scoreCollectabilityWithAI(
+        {
+          title: release.title,
+          artistName: release.artistName,
+          labelName: release.labelName,
+          description: release.description,
+          pressRun: release.pressRun,
+          coloredVinyl: release.coloredVinyl,
+          specialPackaging: release.specialPackaging,
+          heuristicScore: heuristic.score,
+        },
+        keys,
+      );
+
+      if (!aiResult) {
+        throw new Error("AI scoring failed. Check your API keys on the Credentials page.");
+      }
+
+      await db
+        .update(upcomingReleases)
+        .set({
+          collectabilityScore: aiResult.score,
+          collectabilityExplanation: aiResult.explanation,
+          updatedAt: new Date(),
+        })
+        .where(eq(upcomingReleases.id, input.releaseId));
+
+      return aiResult;
     }),
 });
