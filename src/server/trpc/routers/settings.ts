@@ -22,6 +22,7 @@ import {
 } from "@/server/services/spotify/import";
 import { seedTasteFromSpotify } from "@/server/services/spotify/taste-seed";
 import { updateTasteProfile } from "@/server/recommendation/taste-profile";
+import { getSiteConfig } from "@/server/services/site-config";
 
 // ---------------------------------------------------------------------------
 // Settings router
@@ -43,17 +44,17 @@ export const settingsRouter = createTRPCRouter({
       .from(user)
       .where(eq(user.id, ctx.userId));
 
-    const hasAnthropic = !!(row?.anthropicApiKey || process.env.ANTHROPIC_API_KEY);
-    const hasOpenai = !!(row?.openaiApiKey || process.env.OPENAI_API_KEY);
+    const hasAnthropic = !!(row?.anthropicApiKey || await getSiteConfig("anthropic_api_key"));
+    const hasOpenai = !!(row?.openaiApiKey || await getSiteConfig("openai_api_key"));
 
     return {
       discogs: {
-        consumerKey: !!process.env.DISCOGS_CONSUMER_KEY,
+        consumerKey: !!(await getSiteConfig("discogs_consumer_key") || process.env.DISCOGS_CONSUMER_KEY),
         connected: !!row?.discogsAccessToken,
         username: row?.discogsUsername ?? null,
       },
       spotify: {
-        clientId: !!process.env.SPOTIFY_CLIENT_ID,
+        clientId: !!(await getSiteConfig("spotify_client_id") || process.env.SPOTIFY_CLIENT_ID),
         connected: !!row?.spotifyAccessToken,
       },
       ai: {
@@ -232,14 +233,14 @@ export const settingsRouter = createTRPCRouter({
   // Discogs OAuth 1.0a — Request Token step
   // -------------------------------------------------------------------------
   getDiscogsAuthUrl: protectedProcedure.query(async () => {
-    const consumerKey = process.env.DISCOGS_CONSUMER_KEY;
-    const consumerSecret = process.env.DISCOGS_CONSUMER_SECRET;
+    const consumerKey = (await getSiteConfig("discogs_consumer_key")) ?? process.env.DISCOGS_CONSUMER_KEY;
+    const consumerSecret = (await getSiteConfig("discogs_consumer_secret")) ?? process.env.DISCOGS_CONSUMER_SECRET;
 
     if (!consumerKey || !consumerSecret) {
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
         message:
-          "DISCOGS_CONSUMER_KEY or DISCOGS_CONSUMER_SECRET is not set.",
+          "Discogs credentials are not configured. Add them via the Credentials page.",
       });
     }
 
@@ -304,7 +305,7 @@ export const settingsRouter = createTRPCRouter({
     // Store PKCE verifier temporarily (keyed by state)
     setOAuthTemp(`spotify:${state}`, verifier);
 
-    const url = buildSpotifyAuthUrl(state, challenge);
+    const url = await buildSpotifyAuthUrl(state, challenge);
 
     return { url };
   }),

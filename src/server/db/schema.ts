@@ -195,6 +195,10 @@ export const user = pgTable("user", {
   chatSystemPrompt: text("chat_system_prompt"), // custom system prompt override
   anthropicApiKey: text("anthropic_api_key"), // user-provided API key (overrides env)
   openaiApiKey: text("openai_api_key"), // user-provided API key (overrides env)
+  discogsConsumerKey: text("discogs_consumer_key"), // user-provided (overrides env)
+  discogsConsumerSecret: text("discogs_consumer_secret"),
+  spotifyClientId: text("spotify_client_id"), // user-provided (overrides env)
+  spotifyClientSecret: text("spotify_client_secret"),
   recommendationPrompt: text("recommendation_prompt"), // custom prompt for AI recommendations
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
@@ -657,3 +661,17 @@ export type NewAiSuggestion = typeof aiSuggestions.$inferInsert;
 
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type NewChatMessage = typeof chatMessages.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// site_settings - Global configuration (API keys, service credentials)
+// ---------------------------------------------------------------------------
+export const siteSettings = pgTable("site_settings", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  key: text("key").notNull().unique(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .default(sql`now()`),
+});

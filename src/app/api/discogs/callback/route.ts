@@ -6,6 +6,7 @@ import { auth } from "@/server/auth";
 import { db } from "@/server/db";
 import { user } from "@/server/db/schema";
 import { getOAuthTemp } from "@/server/auth/oauth-store";
+import { getSiteConfig } from "@/server/services/site-config";
 
 export async function GET(request: NextRequest) {
   const baseUrl = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
@@ -51,8 +52,14 @@ export async function GET(request: NextRequest) {
     // -----------------------------------------------------------------------
     // 4. Exchange for permanent access token
     // -----------------------------------------------------------------------
-    const consumerKey = process.env.DISCOGS_CONSUMER_KEY!;
-    const consumerSecret = process.env.DISCOGS_CONSUMER_SECRET!;
+    const consumerKey = (await getSiteConfig("discogs_consumer_key")) ?? process.env.DISCOGS_CONSUMER_KEY;
+    const consumerSecret = (await getSiteConfig("discogs_consumer_secret")) ?? process.env.DISCOGS_CONSUMER_SECRET;
+
+    if (!consumerKey || !consumerSecret) {
+      return NextResponse.redirect(
+        `${baseUrl}/settings?discogs=error&reason=missing_credentials`,
+      );
+    }
     const timestamp = Math.floor(Date.now() / 1000).toString();
     const nonce = randomBytes(16).toString("hex");
 

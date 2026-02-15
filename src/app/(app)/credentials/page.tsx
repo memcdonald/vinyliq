@@ -5,12 +5,11 @@ import {
   KeyRound,
   CheckCircle2,
   XCircle,
-  Disc3,
   Bot,
-  Database,
+  Disc3,
+  Music,
   Shield,
-  LinkIcon,
-  Unlink,
+  Database,
   Loader2,
   Save,
   RotateCcw,
@@ -33,67 +32,63 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 
-function StatusIndicator({ configured }: { configured: boolean }) {
+// ---------------------------------------------------------------------------
+// Shared components
+// ---------------------------------------------------------------------------
+
+function StatusDot({ configured }: { configured: boolean }) {
   return configured ? (
-    <div className="flex items-center gap-1.5 text-sm text-success">
-      <CheckCircle2 className="h-4 w-4" />
-      <span>Configured</span>
-    </div>
+    <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
   ) : (
-    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-      <XCircle className="h-4 w-4" />
-      <span>Not configured</span>
-    </div>
+    <XCircle className="h-4 w-4 text-muted-foreground shrink-0" />
   );
 }
 
-function ApiKeyInput({
-  provider,
+function SiteKeyRow({
+  configKey,
   label,
-  configured,
-  maskedKey,
-  fromEnv,
+  description,
+  icon,
 }: {
-  provider: "anthropic" | "openai";
+  configKey: string;
   label: string;
-  configured: boolean;
-  maskedKey: string | null;
-  fromEnv: boolean;
+  description: string;
+  icon: React.ReactNode;
 }) {
+  const { data: status } = trpc.siteConfig.getStatus.useQuery();
   const utils = trpc.useUtils();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState("");
   const [showKey, setShowKey] = useState(false);
 
-  const saveMutation = trpc.settings.saveApiKey.useMutation({
+  const info = status?.[configKey];
+
+  const saveMutation = trpc.siteConfig.saveKey.useMutation({
     onSuccess: () => {
-      toast.success(`${label} API key saved`);
+      toast.success(`${label} saved`);
+      utils.siteConfig.getStatus.invalidate();
       utils.settings.getCredentialsStatus.invalidate();
       setEditing(false);
       setValue("");
     },
-    onError: (error) => {
-      toast.error("Failed to save", { description: error.message });
-    },
+    onError: (error) => toast.error("Failed to save", { description: error.message }),
   });
 
-  const removeMutation = trpc.settings.removeApiKey.useMutation({
+  const removeMutation = trpc.siteConfig.removeKey.useMutation({
     onSuccess: () => {
-      toast.success(`${label} API key removed`);
+      toast.success(`${label} removed`);
+      utils.siteConfig.getStatus.invalidate();
       utils.settings.getCredentialsStatus.invalidate();
     },
-    onError: (error) => {
-      toast.error("Failed to remove", { description: error.message });
-    },
+    onError: (error) => toast.error("Failed to remove", { description: error.message }),
   });
 
   if (editing) {
     return (
-      <div className="space-y-2 py-2">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium">{label}</p>
-          </div>
+      <div className="space-y-2 py-3">
+        <div className="flex items-center gap-2">
+          {icon}
+          <p className="text-sm font-medium">{label}</p>
         </div>
         <div className="flex gap-2">
           <div className="relative flex-1">
@@ -101,7 +96,7 @@ function ApiKeyInput({
               type={showKey ? "text" : "password"}
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              placeholder={`Enter ${label} API key...`}
+              placeholder={`Enter ${label}...`}
               className="w-full rounded-lg border bg-background px-3 py-2 pr-10 text-sm font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               autoFocus
             />
@@ -115,23 +110,12 @@ function ApiKeyInput({
           </div>
           <Button
             size="sm"
-            onClick={() => saveMutation.mutate({ provider, apiKey: value })}
+            onClick={() => saveMutation.mutate({ key: configKey as never, value })}
             disabled={!value.trim() || saveMutation.isPending}
           >
-            {saveMutation.isPending ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <Save className="h-3 w-3" />
-            )}
+            {saveMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setEditing(false);
-              setValue("");
-            }}
-          >
+          <Button variant="ghost" size="sm" onClick={() => { setEditing(false); setValue(""); }}>
             Cancel
           </Button>
         </div>
@@ -140,330 +124,134 @@ function ApiKeyInput({
   }
 
   return (
-    <div className="flex items-center justify-between py-2">
-      <div>
-        <p className="text-sm font-medium">{label}</p>
-        {maskedKey ? (
-          <p className="font-mono text-xs text-muted-foreground">
-            Key: {maskedKey}
+    <div className="flex items-center justify-between py-3">
+      <div className="flex items-center gap-2 min-w-0">
+        {icon}
+        <div className="min-w-0">
+          <p className="text-sm font-medium">{label}</p>
+          <p className="text-xs text-muted-foreground truncate">
+            {info?.masked
+              ? info.masked
+              : info?.fromEnv
+                ? "Set via environment variable"
+                : description}
           </p>
-        ) : fromEnv ? (
-          <p className="text-xs text-muted-foreground">Set via environment variable</p>
-        ) : (
-          <p className="text-xs text-muted-foreground">No key configured</p>
-        )}
+        </div>
       </div>
-      <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="xs"
-          onClick={() => setEditing(true)}
-        >
-          {configured ? "Change" : "Add Key"}
+      <div className="flex items-center gap-2 shrink-0">
+        <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+          {info?.configured ? "Change" : "Add"}
         </Button>
-        {maskedKey && (
+        {info?.fromDb && (
           <Button
             variant="ghost"
-            size="xs"
+            size="sm"
             className="text-muted-foreground hover:text-destructive"
-            onClick={() => removeMutation.mutate({ provider })}
+            onClick={() => removeMutation.mutate({ key: configKey as never })}
             disabled={removeMutation.isPending}
           >
             <Trash2 className="h-3 w-3" />
           </Button>
         )}
-        <StatusIndicator configured={configured} />
+        <StatusDot configured={!!info?.configured} />
       </div>
     </div>
   );
 }
 
-function DiscogsConnection({
-  connected,
-  username,
-  hasConsumerKey,
-}: {
-  connected: boolean;
-  username: string | null;
-  hasConsumerKey: boolean;
-}) {
-  const utils = trpc.useUtils();
+// ---------------------------------------------------------------------------
+// AI Preferences (provider switch, prompts)
+// ---------------------------------------------------------------------------
 
-  const { refetch: fetchAuthUrl, isFetching: isConnecting } =
-    trpc.settings.getDiscogsAuthUrl.useQuery(undefined, { enabled: false });
-
-  const disconnectMutation = trpc.settings.disconnectDiscogs.useMutation({
-    onSuccess: () => {
-      toast.success("Discogs disconnected");
-      utils.settings.getCredentialsStatus.invalidate();
-    },
-    onError: (error) => {
-      toast.error("Failed to disconnect", { description: error.message });
-    },
-  });
-
-  async function handleConnect() {
-    try {
-      const result = await fetchAuthUrl();
-      if (result.data?.url) {
-        window.location.href = result.data.url;
-      }
-    } catch {
-      toast.error("Failed to start Discogs auth");
-    }
-  }
-
-  if (!hasConsumerKey) return null;
-
-  if (connected) {
-    return (
-      <div className="flex items-center gap-2 pt-1">
-        <Badge variant="secondary" className="text-[10px]">
-          Connected{username ? `: ${username}` : ""}
-        </Badge>
-        <Button
-          variant="ghost"
-          size="xs"
-          className="text-muted-foreground hover:text-destructive"
-          onClick={() => disconnectMutation.mutate()}
-          disabled={disconnectMutation.isPending}
-        >
-          <Unlink className="h-3 w-3 mr-1" />
-          Disconnect
-        </Button>
-      </div>
-    );
-  }
-
-  return (
-    <Button
-      variant="outline"
-      size="xs"
-      className="mt-1"
-      onClick={handleConnect}
-      disabled={isConnecting}
-    >
-      {isConnecting ? (
-        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-      ) : (
-        <LinkIcon className="h-3 w-3 mr-1" />
-      )}
-      Connect Discogs
-    </Button>
-  );
-}
-
-function SpotifyConnection({
-  connected,
-  hasClientId,
-}: {
-  connected: boolean;
-  hasClientId: boolean;
-}) {
-  const utils = trpc.useUtils();
-
-  const { refetch: fetchAuthUrl, isFetching: isConnecting } =
-    trpc.settings.getSpotifyAuthUrl.useQuery(undefined, { enabled: false });
-
-  const disconnectMutation = trpc.settings.disconnectSpotify.useMutation({
-    onSuccess: () => {
-      toast.success("Spotify disconnected");
-      utils.settings.getCredentialsStatus.invalidate();
-    },
-    onError: (error) => {
-      toast.error("Failed to disconnect", { description: error.message });
-    },
-  });
-
-  async function handleConnect() {
-    try {
-      const result = await fetchAuthUrl();
-      if (result.data?.url) {
-        window.location.href = result.data.url;
-      }
-    } catch {
-      toast.error("Failed to start Spotify auth");
-    }
-  }
-
-  if (!hasClientId) return null;
-
-  if (connected) {
-    return (
-      <div className="flex items-center gap-2 pt-1">
-        <Badge variant="secondary" className="text-[10px]">
-          Connected
-        </Badge>
-        <Button
-          variant="ghost"
-          size="xs"
-          className="text-muted-foreground hover:text-destructive"
-          onClick={() => disconnectMutation.mutate()}
-          disabled={disconnectMutation.isPending}
-        >
-          <Unlink className="h-3 w-3 mr-1" />
-          Disconnect
-        </Button>
-      </div>
-    );
-  }
-
-  return (
-    <Button
-      variant="outline"
-      size="xs"
-      className="mt-1"
-      onClick={handleConnect}
-      disabled={isConnecting}
-    >
-      {isConnecting ? (
-        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-      ) : (
-        <LinkIcon className="h-3 w-3 mr-1" />
-      )}
-      Connect Spotify
-    </Button>
-  );
-}
-
-function AiPreferences({
-  hasAnthropic,
-  hasOpenai,
-}: {
-  hasAnthropic: boolean;
-  hasOpenai: boolean;
-}) {
-  const utils = trpc.useUtils();
+function AiPreferences() {
+  const { data: status } = trpc.siteConfig.getStatus.useQuery();
   const { data: prefs, isLoading } = trpc.settings.getAiPreferences.useQuery();
+  const utils = trpc.useUtils();
+
+  const hasAnthropic = !!status?.anthropic_api_key?.configured;
+  const hasOpenai = !!status?.openai_api_key?.configured;
 
   const [chatPrompt, setChatPrompt] = useState("");
-  const [chatPromptDirty, setChatPromptDirty] = useState(false);
+  const [chatDirty, setChatDirty] = useState(false);
   const [recPrompt, setRecPrompt] = useState("");
-  const [recPromptDirty, setRecPromptDirty] = useState(false);
+  const [recDirty, setRecDirty] = useState(false);
 
   useEffect(() => {
-    if (prefs?.chatSystemPrompt) {
-      setChatPrompt(prefs.chatSystemPrompt);
-    }
-    if (prefs?.recommendationPrompt) {
-      setRecPrompt(prefs.recommendationPrompt);
-    }
+    if (prefs?.chatSystemPrompt) setChatPrompt(prefs.chatSystemPrompt);
+    if (prefs?.recommendationPrompt) setRecPrompt(prefs.recommendationPrompt);
   }, [prefs?.chatSystemPrompt, prefs?.recommendationPrompt]);
 
   const updateMutation = trpc.settings.updateAiPreferences.useMutation({
     onSuccess: () => {
       toast.success("AI preferences saved");
       utils.settings.getAiPreferences.invalidate();
-      utils.settings.getCredentialsStatus.invalidate();
-      setChatPromptDirty(false);
-      setRecPromptDirty(false);
+      setChatDirty(false);
+      setRecDirty(false);
     },
-    onError: (error) => {
-      toast.error("Failed to save", { description: error.message });
-    },
+    onError: (error) => toast.error("Failed to save", { description: error.message }),
   });
 
-  if (isLoading) return <Skeleton className="h-32 w-full rounded-lg" />;
+  if (isLoading) return <Skeleton className="h-24 w-full rounded-lg" />;
 
   const currentProvider = prefs?.provider ?? "claude";
   const canSwitch = hasAnthropic && hasOpenai;
 
   return (
-    <div className="space-y-4">
-      {/* Provider switcher */}
-      {canSwitch && (
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium">Active Provider</p>
-            <p className="text-xs text-muted-foreground">
-              Choose which AI to use for chat, evaluations, and recommendations
-            </p>
-          </div>
-          <div className="flex gap-1">
-            <Button
-              variant={currentProvider === "claude" ? "default" : "outline"}
-              size="xs"
-              onClick={() =>
-                updateMutation.mutate({ provider: "claude" })
-              }
-              disabled={updateMutation.isPending}
-            >
-              Claude
-            </Button>
-            <Button
-              variant={currentProvider === "openai" ? "default" : "outline"}
-              size="xs"
-              onClick={() =>
-                updateMutation.mutate({ provider: "openai" })
-              }
-              disabled={updateMutation.isPending}
-            >
-              OpenAI
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {!canSwitch && (
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium">Active Provider</p>
-            <p className="text-xs text-muted-foreground">
-              Add both API keys to switch between providers
-            </p>
-          </div>
-          <Badge variant="outline">{currentProvider}</Badge>
-        </div>
-      )}
-
+    <div className="space-y-4 pt-2">
       <Separator />
 
-      {/* Chat system prompt */}
-      <div className="space-y-2">
+      {/* Provider switcher */}
+      <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium">Chat System Prompt</p>
+          <p className="text-sm font-medium">Active Provider</p>
           <p className="text-xs text-muted-foreground">
-            Customize how the AI assistant behaves. Your collection profile is always appended.
+            {canSwitch ? "Choose which AI to use" : "Add both keys to switch providers"}
           </p>
         </div>
+        {canSwitch ? (
+          <div className="flex gap-1">
+            {(["claude", "openai"] as const).map((p) => (
+              <Button
+                key={p}
+                variant={currentProvider === p ? "default" : "outline"}
+                size="sm"
+                onClick={() => updateMutation.mutate({ provider: p })}
+                disabled={updateMutation.isPending}
+              >
+                {p === "claude" ? "Claude" : "OpenAI"}
+              </Button>
+            ))}
+          </div>
+        ) : (
+          <Badge variant="outline">{currentProvider}</Badge>
+        )}
+      </div>
+
+      {/* Chat prompt */}
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Chat System Prompt</p>
         <textarea
           value={chatPrompt}
-          onChange={(e) => {
-            setChatPrompt(e.target.value);
-            setChatPromptDirty(true);
-          }}
+          onChange={(e) => { setChatPrompt(e.target.value); setChatDirty(true); }}
           placeholder="You are VinylIQ, a knowledgeable vinyl record advisor..."
-          rows={4}
+          rows={3}
           className="w-full resize-y rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         />
-        <div className="flex items-center gap-2">
+        <div className="flex gap-2">
           <Button
-            size="xs"
-            onClick={() =>
-              updateMutation.mutate({
-                chatSystemPrompt: chatPrompt.trim() || null,
-              })
-            }
-            disabled={!chatPromptDirty || updateMutation.isPending}
+            size="sm"
+            onClick={() => updateMutation.mutate({ chatSystemPrompt: chatPrompt.trim() || null })}
+            disabled={!chatDirty || updateMutation.isPending}
           >
-            {updateMutation.isPending ? (
-              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-            ) : (
-              <Save className="h-3 w-3 mr-1" />
-            )}
+            {updateMutation.isPending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Save className="h-3 w-3 mr-1" />}
             Save
           </Button>
           {prefs?.chatSystemPrompt && (
             <Button
               variant="ghost"
-              size="xs"
+              size="sm"
               className="text-muted-foreground"
-              onClick={() => {
-                setChatPrompt("");
-                setChatPromptDirty(true);
-                updateMutation.mutate({ chatSystemPrompt: null });
-              }}
-              disabled={updateMutation.isPending}
+              onClick={() => { setChatPrompt(""); setChatDirty(true); updateMutation.mutate({ chatSystemPrompt: null }); }}
             >
               <RotateCcw className="h-3 w-3 mr-1" />
               Reset
@@ -472,57 +260,34 @@ function AiPreferences({
         </div>
       </div>
 
-      <Separator />
-
       {/* Recommendation prompt */}
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-primary" />
-          <div>
-            <p className="text-sm font-medium">Recommendation Prompt</p>
-            <p className="text-xs text-muted-foreground">
-              Customize how AI curates album recommendations for you. Your taste profile is always included.
-            </p>
-          </div>
+          <p className="text-sm font-medium">Recommendation Prompt</p>
         </div>
         <textarea
           value={recPrompt}
-          onChange={(e) => {
-            setRecPrompt(e.target.value);
-            setRecPromptDirty(true);
-          }}
-          placeholder="You are a vinyl record expert and curator. Based on the collector's taste profile, recommend albums they would love..."
-          rows={4}
+          onChange={(e) => { setRecPrompt(e.target.value); setRecDirty(true); }}
+          placeholder="You are a vinyl record expert and curator..."
+          rows={3}
           className="w-full resize-y rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         />
-        <div className="flex items-center gap-2">
+        <div className="flex gap-2">
           <Button
-            size="xs"
-            onClick={() =>
-              updateMutation.mutate({
-                recommendationPrompt: recPrompt.trim() || null,
-              })
-            }
-            disabled={!recPromptDirty || updateMutation.isPending}
+            size="sm"
+            onClick={() => updateMutation.mutate({ recommendationPrompt: recPrompt.trim() || null })}
+            disabled={!recDirty || updateMutation.isPending}
           >
-            {updateMutation.isPending ? (
-              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-            ) : (
-              <Save className="h-3 w-3 mr-1" />
-            )}
+            {updateMutation.isPending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Save className="h-3 w-3 mr-1" />}
             Save
           </Button>
           {prefs?.recommendationPrompt && (
             <Button
               variant="ghost"
-              size="xs"
+              size="sm"
               className="text-muted-foreground"
-              onClick={() => {
-                setRecPrompt("");
-                setRecPromptDirty(true);
-                updateMutation.mutate({ recommendationPrompt: null });
-              }}
-              disabled={updateMutation.isPending}
+              onClick={() => { setRecPrompt(""); setRecDirty(true); updateMutation.mutate({ recommendationPrompt: null }); }}
             >
               <RotateCcw className="h-3 w-3 mr-1" />
               Reset
@@ -534,9 +299,13 @@ function AiPreferences({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Main page
+// ---------------------------------------------------------------------------
+
 export default function CredentialsPage() {
-  const { data: status, isLoading } =
-    trpc.settings.getCredentialsStatus.useQuery();
+  const { data: status, isLoading } = trpc.siteConfig.getStatus.useQuery();
+  const { data: legacyStatus } = trpc.settings.getCredentialsStatus.useQuery();
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
@@ -547,20 +316,20 @@ export default function CredentialsPage() {
             Credentials
           </h1>
           <p className="text-sm text-muted-foreground">
-            API keys, service connections, and AI configuration
+            API keys and service configuration
           </p>
         </div>
       </div>
 
       {isLoading ? (
         <div className="space-y-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-32 w-full rounded-lg" />
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-40 w-full rounded-lg" />
           ))}
         </div>
-      ) : status ? (
+      ) : (
         <>
-          {/* AI Services — API Keys */}
+          {/* AI Services */}
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
@@ -568,30 +337,23 @@ export default function CredentialsPage() {
                 <CardTitle>AI Services</CardTitle>
               </div>
               <CardDescription>
-                API keys for AI-powered recommendations, chat, and evaluations
+                Powers recommendations, chat, collectability scoring, and evaluations
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-1">
-              <ApiKeyInput
-                provider="anthropic"
-                label="Anthropic (Claude)"
-                configured={status.ai.anthropic}
-                maskedKey={status.ai.anthropicMasked ?? null}
-                fromEnv={status.ai.anthropicFromEnv}
+            <CardContent className="space-y-0 divide-y divide-border">
+              <SiteKeyRow
+                configKey="anthropic_api_key"
+                label="Anthropic API Key"
+                description="For Claude — recommendations, chat, scoring"
+                icon={<Bot className="h-4 w-4 text-muted-foreground shrink-0" />}
               />
-              <Separator />
-              <ApiKeyInput
-                provider="openai"
-                label="OpenAI"
-                configured={status.ai.openai}
-                maskedKey={status.ai.openaiMasked ?? null}
-                fromEnv={status.ai.openaiFromEnv}
+              <SiteKeyRow
+                configKey="openai_api_key"
+                label="OpenAI API Key"
+                description="Alternative AI provider"
+                icon={<Bot className="h-4 w-4 text-muted-foreground shrink-0" />}
               />
-              <Separator />
-              <AiPreferences
-                hasAnthropic={status.ai.anthropic}
-                hasOpenai={status.ai.openai}
-              />
+              <AiPreferences />
             </CardContent>
           </Card>
 
@@ -603,104 +365,88 @@ export default function CredentialsPage() {
                 <CardTitle>Music Services</CardTitle>
               </div>
               <CardDescription>
-                Collection import and music data
+                Collection import and music data integrations
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-1">
-              <div className="py-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">Discogs</p>
-                    <p className="font-mono text-xs text-muted-foreground">
-                      DISCOGS_CONSUMER_KEY
-                    </p>
-                  </div>
-                  <StatusIndicator configured={status.discogs.consumerKey} />
-                </div>
-                <DiscogsConnection
-                  connected={status.discogs.connected}
-                  username={status.discogs.username ?? null}
-                  hasConsumerKey={status.discogs.consumerKey}
-                />
-              </div>
-              <Separator />
-              <div className="py-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">Spotify</p>
-                    <p className="font-mono text-xs text-muted-foreground">
-                      SPOTIFY_CLIENT_ID
-                    </p>
-                  </div>
-                  <StatusIndicator configured={status.spotify.clientId} />
-                </div>
-                <SpotifyConnection
-                  connected={status.spotify.connected}
-                  hasClientId={status.spotify.clientId}
-                />
-              </div>
+            <CardContent className="space-y-0 divide-y divide-border">
+              <SiteKeyRow
+                configKey="discogs_consumer_key"
+                label="Discogs Consumer Key"
+                description="Required for Discogs OAuth and collection import"
+                icon={<Disc3 className="h-4 w-4 text-muted-foreground shrink-0" />}
+              />
+              <SiteKeyRow
+                configKey="discogs_consumer_secret"
+                label="Discogs Consumer Secret"
+                description="Paired with consumer key"
+                icon={<Disc3 className="h-4 w-4 text-muted-foreground shrink-0" />}
+              />
+              <SiteKeyRow
+                configKey="spotify_client_id"
+                label="Spotify Client ID"
+                description="Required for Spotify OAuth and library import"
+                icon={<Music className="h-4 w-4 text-muted-foreground shrink-0" />}
+              />
+              <SiteKeyRow
+                configKey="spotify_client_secret"
+                label="Spotify Client Secret"
+                description="Paired with client ID"
+                icon={<Music className="h-4 w-4 text-muted-foreground shrink-0" />}
+              />
             </CardContent>
           </Card>
 
-          {/* Infrastructure */}
+          {/* Infrastructure (read-only status) */}
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Database className="h-5 w-5 text-muted-foreground" />
                 <CardTitle>Infrastructure</CardTitle>
               </div>
-              <CardDescription>Caching and storage services</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between py-2">
-                <div>
-                  <p className="text-sm font-medium">Upstash Redis</p>
-                  <p className="font-mono text-xs text-muted-foreground">UPSTASH_REDIS_REST_URL</p>
-                </div>
-                <StatusIndicator configured={status.cache.redis} />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Auth */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-muted-foreground" />
-                <CardTitle>Authentication</CardTitle>
-              </div>
               <CardDescription>
-                Session and auth configuration
+                Environment-level configuration (set via deployment platform)
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-1">
-              <div className="flex items-center justify-between py-2">
-                <div>
-                  <p className="text-sm font-medium">Auth Secret</p>
-                  <p className="font-mono text-xs text-muted-foreground">BETTER_AUTH_SECRET</p>
+            <CardContent className="space-y-0 divide-y divide-border">
+              <div className="flex items-center justify-between py-3">
+                <div className="flex items-center gap-2">
+                  <Database className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">Database</p>
+                    <p className="text-xs text-muted-foreground font-mono">DATABASE_URL</p>
+                  </div>
                 </div>
-                <StatusIndicator configured={status.auth.secret} />
+                <StatusDot configured={true} />
               </div>
-              <Separator />
-              <div className="flex items-center justify-between py-2">
-                <div>
-                  <p className="text-sm font-medium">Auth URL</p>
-                  <p className="font-mono text-xs text-muted-foreground">
-                    BETTER_AUTH_URL
-                  </p>
+              <div className="flex items-center justify-between py-3">
+                <div className="flex items-center gap-2">
+                  <Database className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">Redis Cache</p>
+                    <p className="text-xs text-muted-foreground font-mono">UPSTASH_REDIS_REST_URL</p>
+                  </div>
                 </div>
-                <span className="font-mono text-xs">{status.auth.url}</span>
+                <StatusDot configured={!!legacyStatus?.cache?.redis} />
+              </div>
+              <div className="flex items-center justify-between py-3">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">Auth</p>
+                    <p className="text-xs text-muted-foreground font-mono">BETTER_AUTH_SECRET</p>
+                  </div>
+                </div>
+                <StatusDot configured={!!legacyStatus?.auth?.secret} />
               </div>
             </CardContent>
           </Card>
 
-          {/* Help text */}
           <p className="text-center text-xs text-muted-foreground">
-            AI API keys can be added above or set via environment variables.
-            Music service credentials are configured via environment variables in your deployment platform.
+            Keys set here are stored in the database and override environment variables.
+            Infrastructure keys must be set in your deployment platform.
           </p>
         </>
-      ) : null}
+      )}
     </div>
   );
 }

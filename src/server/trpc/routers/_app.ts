@@ -11,6 +11,7 @@ import { aiRouter } from './ai';
 import { sourcesRouter } from './sources';
 import { suggestionsRouter } from './suggestions';
 import { chatRouter } from './chat';
+import { siteConfigRouter } from './site-config';
 
 export const appRouter = createTRPCRouter({
   album: albumRouter,
@@ -25,6 +26,7 @@ export const appRouter = createTRPCRouter({
   sources: sourcesRouter,
   suggestions: suggestionsRouter,
   chat: chatRouter,
+  siteConfig: siteConfigRouter,
 });
 
 export type AppRouter = typeof appRouter;

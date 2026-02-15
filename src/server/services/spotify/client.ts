@@ -25,6 +25,7 @@ import type {
   SpotifyTimeRange,
   SpotifyTokenResponse,
 } from './types';
+import { getSiteConfig } from '@/server/services/site-config';
 
 class SpotifyClient {
   private baseUrl = 'https://api.spotify.com/v1';
@@ -36,9 +37,9 @@ class SpotifyClient {
   private _tokenExpiresAt: number = 0;
 
   /**
-   * Credentials are resolved lazily on first use so the module can be
-   * imported safely at build/startup time without requiring env vars to
-   * be present immediately.
+   * Credentials are resolved lazily on first use. Resolution order:
+   *   1. site_settings DB table (set via admin UI)
+   *   2. Environment variable
    */
   private _clientId: string | undefined;
   private _clientSecret: string | undefined;
@@ -47,14 +48,16 @@ class SpotifyClient {
     this.rateLimiter = rateLimiter;
   }
 
-  // ---------- lazy credential getters ----------
+  // ---------- lazy credential resolvers ----------
 
-  private get clientId(): string {
+  private async resolveClientId(): Promise<string> {
     if (!this._clientId) {
-      const id = process.env.SPOTIFY_CLIENT_ID;
+      const id =
+        (await getSiteConfig('spotify_client_id')) ??
+        process.env.SPOTIFY_CLIENT_ID?.trim();
       if (!id) {
         throw new Error(
-          'SPOTIFY_CLIENT_ID is not set. Please add it to your environment variables.',
+          'Spotify Client ID is not configured. Add it via Credentials page or SPOTIFY_CLIENT_ID env var.',
         );
       }
       this._clientId = id;
@@ -62,17 +65,25 @@ class SpotifyClient {
     return this._clientId;
   }
 
-  private get clientSecret(): string {
+  private async resolveClientSecret(): Promise<string> {
     if (!this._clientSecret) {
-      const secret = process.env.SPOTIFY_CLIENT_SECRET;
+      const secret =
+        (await getSiteConfig('spotify_client_secret')) ??
+        process.env.SPOTIFY_CLIENT_SECRET?.trim();
       if (!secret) {
         throw new Error(
-          'SPOTIFY_CLIENT_SECRET is not set. Please add it to your environment variables.',
+          'Spotify Client Secret is not configured. Add it via Credentials page or SPOTIFY_CLIENT_SECRET env var.',
         );
       }
       this._clientSecret = secret;
     }
     return this._clientSecret;
+  }
+
+  /** Clear cached credentials (call after site_settings change). */
+  clearCredentialCache(): void {
+    this._clientId = undefined;
+    this._clientSecret = undefined;
   }
 
   // ---------- client credentials token management ----------
@@ -91,7 +102,9 @@ class SpotifyClient {
       return this._accessToken;
     }
 
-    const credentials = btoa(`${this.clientId}:${this.clientSecret}`);
+    const clientId = await this.resolveClientId();
+    const clientSecret = await this.resolveClientSecret();
+    const credentials = btoa(`${clientId}:${clientSecret}`);
 
     const response = await fetch(this.tokenUrl, {
       method: 'POST',

@@ -10,6 +10,7 @@ import type {
   DiscogsArtistReleasesResponse,
 } from './types';
 import { cached, CacheTTL, CacheKey } from '@/lib/cache';
+import { getSiteConfig } from '@/server/services/site-config';
 
 class DiscogsClient {
   private userAgent: string = 'VinylIQ/1.0';
@@ -17,9 +18,9 @@ class DiscogsClient {
   private rateLimiter: RateLimiter;
 
   /**
-   * Credentials are resolved lazily on first use so the module can be
-   * imported safely at build/startup time without requiring env vars to
-   * be present immediately.
+   * Credentials are resolved lazily on first use. Resolution order:
+   *   1. site_settings DB table (set via admin UI)
+   *   2. Environment variable
    */
   private _consumerKey: string | undefined;
   private _consumerSecret: string | undefined;
@@ -28,14 +29,16 @@ class DiscogsClient {
     this.rateLimiter = rateLimiter;
   }
 
-  // ---------- lazy credential getters ----------
+  // ---------- lazy credential resolvers ----------
 
-  private get consumerKey(): string {
+  private async resolveConsumerKey(): Promise<string> {
     if (!this._consumerKey) {
-      const key = process.env.DISCOGS_CONSUMER_KEY?.trim();
+      const key =
+        (await getSiteConfig('discogs_consumer_key')) ??
+        process.env.DISCOGS_CONSUMER_KEY?.trim();
       if (!key) {
         throw new Error(
-          'DISCOGS_CONSUMER_KEY is not set. Please add it to your environment variables.',
+          'Discogs Consumer Key is not configured. Add it via Credentials page or DISCOGS_CONSUMER_KEY env var.',
         );
       }
       this._consumerKey = key;
@@ -43,17 +46,25 @@ class DiscogsClient {
     return this._consumerKey;
   }
 
-  private get consumerSecret(): string {
+  private async resolveConsumerSecret(): Promise<string> {
     if (!this._consumerSecret) {
-      const secret = process.env.DISCOGS_CONSUMER_SECRET?.trim();
+      const secret =
+        (await getSiteConfig('discogs_consumer_secret')) ??
+        process.env.DISCOGS_CONSUMER_SECRET?.trim();
       if (!secret) {
         throw new Error(
-          'DISCOGS_CONSUMER_SECRET is not set. Please add it to your environment variables.',
+          'Discogs Consumer Secret is not configured. Add it via Credentials page or DISCOGS_CONSUMER_SECRET env var.',
         );
       }
       this._consumerSecret = secret;
     }
     return this._consumerSecret;
+  }
+
+  /** Clear cached credentials (call after site_settings change). */
+  clearCredentialCache(): void {
+    this._consumerKey = undefined;
+    this._consumerSecret = undefined;
   }
 
   // ---------- public API ----------
@@ -229,6 +240,8 @@ class DiscogsClient {
       }
     }
 
+    const consumerKey = await this.resolveConsumerKey();
+    const consumerSecret = await this.resolveConsumerSecret();
     const timestamp = Math.floor(Date.now() / 1000).toString();
     const nonce = Math.random().toString(36).substring(2);
 
@@ -237,7 +250,7 @@ class DiscogsClient {
       headers: {
         'User-Agent': this.userAgent,
         Accept: 'application/vnd.discogs.v2.discogs+json',
-        Authorization: `OAuth oauth_consumer_key="${this.consumerKey}", oauth_token="${accessToken}", oauth_signature_method="PLAINTEXT", oauth_signature="${this.consumerSecret}&${accessTokenSecret}", oauth_timestamp="${timestamp}", oauth_nonce="${nonce}"`,
+        Authorization: `OAuth oauth_consumer_key="${consumerKey}", oauth_token="${accessToken}", oauth_signature_method="PLAINTEXT", oauth_signature="${consumerSecret}&${accessTokenSecret}", oauth_timestamp="${timestamp}", oauth_nonce="${nonce}"`,
       },
     });
 
@@ -266,8 +279,10 @@ class DiscogsClient {
     const url = new URL(`${this.baseUrl}${path}`);
 
     // Auth params
-    url.searchParams.set('key', this.consumerKey);
-    url.searchParams.set('secret', this.consumerSecret);
+    const consumerKey = await this.resolveConsumerKey();
+    const consumerSecret = await this.resolveConsumerSecret();
+    url.searchParams.set('key', consumerKey);
+    url.searchParams.set('secret', consumerSecret);
 
     // Additional query params
     if (params) {

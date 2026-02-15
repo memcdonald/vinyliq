@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/server/db";
 import { user } from "@/server/db/schema";
-import { env } from "@/lib/env";
+import { getSiteConfig } from "@/server/services/site-config";
 
 export interface ResolvedKeys {
   anthropicKey: string;
@@ -10,7 +10,8 @@ export interface ResolvedKeys {
 
 /**
  * Resolve AI API keys for a user.
- * User-provided keys (stored in DB) take priority over env vars.
+ *
+ * Priority: user-provided key → site_settings → env var → empty string.
  */
 export async function getUserApiKeys(userId: string): Promise<ResolvedKeys> {
   const [row] = await db
@@ -21,9 +22,12 @@ export async function getUserApiKeys(userId: string): Promise<ResolvedKeys> {
     .from(user)
     .where(eq(user.id, userId));
 
+  const siteAnthropic = await getSiteConfig("anthropic_api_key");
+  const siteOpenai = await getSiteConfig("openai_api_key");
+
   return {
-    anthropicKey: row?.anthropicApiKey || env.ANTHROPIC_API_KEY,
-    openaiKey: row?.openaiApiKey || env.OPENAI_API_KEY,
+    anthropicKey: row?.anthropicApiKey || siteAnthropic || "",
+    openaiKey: row?.openaiApiKey || siteOpenai || "",
   };
 }
 
