@@ -21,8 +21,10 @@ import {
   getSpotifyImportProgress,
 } from "@/server/services/spotify/import";
 import { seedTasteFromSpotify } from "@/server/services/spotify/taste-seed";
+import { analyzePreferencesWithAI } from "@/server/services/spotify/preference-analysis";
 import { updateTasteProfile } from "@/server/recommendation/taste-profile";
 import { getSiteConfig } from "@/server/services/site-config";
+import type { SpotifyPreferenceAnalysis } from "@/server/services/spotify/types";
 
 // ---------------------------------------------------------------------------
 // Settings router
@@ -442,5 +444,27 @@ export const settingsRouter = createTRPCRouter({
         .map(([a]) => a),
       computedAt: existing.computedAt,
     };
+  }),
+
+  // -------------------------------------------------------------------------
+  // Spotify AI Preference Analysis
+  // -------------------------------------------------------------------------
+  analyzeSpotifyPreferences: protectedProcedure.mutation(async ({ ctx }) => {
+    const analysis = await analyzePreferencesWithAI(ctx.userId);
+    return analysis;
+  }),
+
+  getSpotifyPreferenceAnalysis: protectedProcedure.query(async ({ ctx }) => {
+    const [existing] = await db
+      .select({ aiPreferenceAnalysis: userTasteProfiles.aiPreferenceAnalysis })
+      .from(userTasteProfiles)
+      .where(eq(userTasteProfiles.userId, ctx.userId))
+      .limit(1);
+
+    if (!existing?.aiPreferenceAnalysis) {
+      return null;
+    }
+
+    return existing.aiPreferenceAnalysis as SpotifyPreferenceAnalysis;
   }),
 });

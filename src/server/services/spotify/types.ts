@@ -117,6 +117,20 @@ export interface SpotifySavedAlbum {
 export type SpotifyTimeRange = 'short_term' | 'medium_term' | 'long_term';
 
 // ---------------------------------------------------------------------------
+// AI Preference Analysis
+// ---------------------------------------------------------------------------
+
+export interface SpotifyPreferenceAnalysis {
+  summary: string;
+  topGenres: string[];
+  moods: string[];
+  eras: string[];
+  keyInsights: string[];
+  vinylRecommendations: string[];
+  analyzedAt: string; // ISO date string
+}
+
+// ---------------------------------------------------------------------------
 // Auth
 // ---------------------------------------------------------------------------
 

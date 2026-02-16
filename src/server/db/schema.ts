@@ -324,6 +324,7 @@ export const userTasteProfiles = pgTable(
     eraWeights: jsonb("era_weights").default({}),
     labelWeights: jsonb("label_weights").default({}),
     artistWeights: jsonb("artist_weights").default({}),
+    aiPreferenceAnalysis: jsonb("ai_preference_analysis"),
     computedAt: timestamp("computed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()

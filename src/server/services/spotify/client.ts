@@ -24,6 +24,7 @@ import type {
   SpotifySavedAlbum,
   SpotifyTimeRange,
   SpotifyTokenResponse,
+  SpotifyTrack,
 } from './types';
 import { getSiteConfig } from '@/server/services/site-config';
 
@@ -237,6 +238,26 @@ class SpotifyClient {
     };
 
     return this.request<SpotifyPaging<SpotifyArtist>>('/me/top/artists', params, accessToken);
+  }
+
+  /**
+   * Get the current user's top tracks (requires `user-top-read` scope).
+   *
+   * @param timeRange  Over what time frame: short_term (~4 weeks),
+   *                   medium_term (~6 months), long_term (all time).
+   * @see https://developer.spotify.com/documentation/web-api/reference/get-users-top-artists-and-tracks
+   */
+  async getUserTopTracks(
+    accessToken: string,
+    timeRange: SpotifyTimeRange = 'medium_term',
+    limit: number = 50,
+  ): Promise<SpotifyPaging<SpotifyTrack>> {
+    const params: Record<string, string> = {
+      time_range: timeRange,
+      limit: String(limit),
+    };
+
+    return this.request<SpotifyPaging<SpotifyTrack>>('/me/top/tracks', params, accessToken);
   }
 
   // ---------- private ----------

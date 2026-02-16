@@ -29,6 +29,13 @@
       "when": 1771109006826,
       "tag": "0003_friendly_prima",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1771257382383,
+      "tag": "0004_tiny_madame_web",
+      "breakpoints": true
     }
   ]
 }
