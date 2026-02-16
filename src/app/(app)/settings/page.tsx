@@ -650,39 +650,17 @@ function TasteProfileCard() {
               </div>
             )}
 
-            {/* Numerical taste data (always shown if available) */}
-            {taste && (
-              <div className="space-y-4">
-                {taste.topGenres.length > 0 && (
-                  <div>
-                    <h4 className="text-xs font-medium text-muted-foreground mb-2">Top Genres (by weight)</h4>
-                    <div className="flex flex-wrap gap-1.5">
-                      {taste.topGenres.map((g) => (
-                        <Badge key={g.genre} variant="secondary" className="text-xs">
-                          {g.genre}
-                          <span className="ml-1 opacity-60">{g.weight}%</span>
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {taste.topArtists.length > 0 && (
-                  <div>
-                    <h4 className="text-xs font-medium text-muted-foreground mb-2">Top Artists</h4>
-                    <div className="flex flex-wrap gap-1.5">
-                      {taste.topArtists.map((a) => (
-                        <Badge key={a} variant="outline" className="text-xs">
-                          {a}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {taste.computedAt && (
-                  <p className="text-[10px] text-muted-foreground/60">
-                    Weights updated: {new Date(taste.computedAt).toLocaleDateString()}
-                  </p>
-                )}
+            {/* Top Artists (always shown if available) */}
+            {taste && taste.topArtists.length > 0 && (
+              <div>
+                <h4 className="text-xs font-medium text-muted-foreground mb-2">Top Artists</h4>
+                <div className="flex flex-wrap gap-1.5">
+                  {taste.topArtists.map((a) => (
+                    <Badge key={a} variant="outline" className="text-xs">
+                      {a}
+                    </Badge>
+                  ))}
+                </div>
               </div>
             )}
           </>
