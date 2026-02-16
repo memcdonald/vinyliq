@@ -6,8 +6,8 @@ services:
     env_file:
       - .env.local
     environment:
-      - BETTER_AUTH_URL=http://vinyliq.lab
-      - NEXT_PUBLIC_BETTER_AUTH_URL=http://vinyliq.lab
+      - BETTER_AUTH_URL=https://vinyliq.lab
+      - NEXT_PUBLIC_BETTER_AUTH_URL=https://vinyliq.lab
     networks:
       - lab
 

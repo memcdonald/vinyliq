@@ -195,7 +195,7 @@ async function fetchCollectionProfile(userId: string): Promise<CollectionProfile
       title: i.title,
       artist: albumArtistMap[i.albumId] ?? "Unknown",
       rating: i.rating!,
-      genres: i.genres ?? [],
+      genres: Array.isArray(i.genres) ? i.genres : [],
     }));
 
   const wantedAlbums = items
@@ -254,7 +254,7 @@ function buildAnalysisPrompt(
       if (rangeArtists.length > 0) {
         prompt += `## Top Artists — ${TIME_RANGE_LABELS[range]}\n`;
         for (const a of rangeArtists.slice(0, 25)) {
-          prompt += `- ${a.name} (genres: ${a.genres.join(", ") || "none listed"})\n`;
+          prompt += `- ${a.name} (genres: ${(a.genres ?? []).join(", ") || "none listed"})\n`;
         }
         prompt += "\n";
       }
@@ -289,7 +289,7 @@ function buildAnalysisPrompt(
     if (collectionProfile.topRatedAlbums.length > 0) {
       prompt += `### Top Rated Albums (8+/10)\n`;
       for (const a of collectionProfile.topRatedAlbums) {
-        prompt += `- ${a.artist} — ${a.title} (${a.rating}/10, ${a.genres.join(", ") || "no genres"})\n`;
+        prompt += `- ${a.artist} — ${a.title} (${a.rating}/10, ${(a.genres ?? []).join(", ") || "no genres"})\n`;
       }
       prompt += "\n";
     }
