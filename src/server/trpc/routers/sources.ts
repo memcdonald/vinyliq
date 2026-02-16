@@ -2,7 +2,7 @@ import { z } from "zod";
 import { eq, and, asc, sql } from "drizzle-orm";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { db } from "@/server/db";
-import { dataSources } from "@/server/db/schema";
+import { dataSources, aiSuggestions } from "@/server/db/schema";
 
 export const sourcesRouter = createTRPCRouter({
   getAll: protectedProcedure.query(async ({ ctx }) => {
@@ -83,6 +83,12 @@ export const sourcesRouter = createTRPCRouter({
   removeSource: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
+      // Unlink suggestions referencing this source before deleting
+      await db
+        .update(aiSuggestions)
+        .set({ sourceId: null })
+        .where(eq(aiSuggestions.sourceId, input.id));
+
       const deleted = await db
         .delete(dataSources)
         .where(
