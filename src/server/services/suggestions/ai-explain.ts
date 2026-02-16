@@ -106,8 +106,8 @@ function buildBatchPrompt(
     .map(
       (s, i) =>
         `${i + 1}. "${s.title}" by ${s.artistName}${s.labelName ? ` (${s.labelName})` : ""}${s.sourceName ? ` — found via ${s.sourceName}` : ""}` +
-        `${s.collectabilityScore ? ` [collectability: ${s.collectabilityScore}/100]` : ""}` +
-        `${s.tasteScore ? ` [taste match: ${(s.tasteScore * 100).toFixed(0)}%]` : ""}`,
+        `${s.collectabilityScore ? ` [collectability: ${s.collectabilityScore}/10]` : ""}` +
+        `${s.tasteScore ? ` [taste: ${s.tasteScore}/10]` : ""}`,
     )
     .join("\n");
 
@@ -115,13 +115,17 @@ function buildBatchPrompt(
 - Top genres: ${topGenres || "Not enough data yet"}
 - Favorite artists: ${topArtists || "Not enough data yet"}
 
-For each suggested release below, write a brief (1-2 sentence) personalized explanation of why this collector might be interested, considering their taste and the release's collectability. Be specific and concise.
+For each suggested release below, write a 1-2 sentence recommendation note explaining:
+1. Why this album fits the collector's taste — reference specific genres or artists from their profile
+2. Collectability factors — mention anything that makes this release desirable to collect (limited pressing, label reputation, artist demand, colored vinyl, etc.)
+
+Scores are on a 1-10 scale. Be specific, concise, and frame each note as a recommendation rationale.
 
 Releases:
 ${items}
 
 Respond with ONLY valid JSON: an array of strings, one explanation per release, in the same order.
-Example: ["This aligns with your love of jazz...", "A rare limited pressing from..."]`;
+Example: ["Fits your taste for jazz and soul — this Third Man pressing is limited to 500 copies on colored vinyl, making it highly collectible.", "Strong match given your interest in post-punk; debut pressings from this label tend to appreciate quickly."]`;
 }
 
 async function callClaude(

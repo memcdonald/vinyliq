@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { eq, and, desc, sql, count } from "drizzle-orm";
+import { eq, and, desc, sql, count, isNotNull } from "drizzle-orm";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { db } from "@/server/db";
 import { aiSuggestions } from "@/server/db/schema";
@@ -18,7 +18,11 @@ export const suggestionsRouter = createTRPCRouter({
         .default({ limit: 50, offset: 0 }),
     )
     .query(async ({ ctx, input }) => {
-      const conditions = [eq(aiSuggestions.userId, ctx.userId)];
+      const conditions = [
+        eq(aiSuggestions.userId, ctx.userId),
+        isNotNull(aiSuggestions.artistName),
+        isNotNull(aiSuggestions.title),
+      ];
       if (input.status) {
         conditions.push(eq(aiSuggestions.status, input.status));
       }

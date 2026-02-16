@@ -24,17 +24,16 @@ type SortBy = "combined" | "taste" | "collectability" | "date";
 
 function ScoreBadge({ score, label }: { score: number | null; label: string }) {
   if (score === null) return null;
-  const pct = label === "taste" ? Math.round(score * 100) : Math.round(score);
-  const max = label === "taste" ? 100 : 100;
+  const val = Math.round(score);
   const color =
-    pct >= 70
+    val >= 7
       ? "bg-success/15 text-success"
-      : pct >= 40
+      : val >= 4
         ? "bg-acid-halo/15 text-acid-halo"
         : "bg-muted text-muted-foreground";
   return (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${color}`}>
-      {label} {pct}/{max}
+      {label} {val}/10
     </span>
   );
 }

@@ -15,10 +15,10 @@ export function CollectabilityBadge({ score, size = "sm" }: CollectabilityBadgeP
   let colorClass: string;
   let label: string;
 
-  if (rounded >= 70) {
+  if (rounded >= 7) {
     colorClass = "bg-success/15 text-success";
     label = "High";
-  } else if (rounded >= 40) {
+  } else if (rounded >= 4) {
     colorClass = "bg-acid-halo/15 text-acid-halo";
     label = "Medium";
   } else {
@@ -33,9 +33,9 @@ export function CollectabilityBadge({ score, size = "sm" }: CollectabilityBadgeP
         colorClass,
         size === "sm" ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-xs",
       )}
-      title={`Collectability: ${rounded}/100 (${label})`}
+      title={`Collectability: ${rounded}/10 (${label})`}
     >
-      {rounded}
+      {rounded}/10
     </span>
   );
 }

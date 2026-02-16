@@ -58,6 +58,10 @@ async function probeSource(
 
   // Filter to actual album releases (heuristic + AI validation)
   rawReleases = await filterToAlbums(rawReleases, keys);
+
+  // Reject releases missing artist or title
+  rawReleases = rawReleases.filter(r => r.artistName?.trim() && r.title?.trim());
+
   if (rawReleases.length === 0) {
     return { sourceName: source.sourceName, discovered: 0, explained: 0 };
   }
@@ -109,9 +113,11 @@ async function probeSource(
       specialPackaging: raw.specialPackaging ?? null,
     });
 
-    const tasteScore = tasteScores[i] ?? 0;
-    // Combined: 40% taste, 60% collectability (normalized to 0-1)
-    const combinedScore = tasteScore * 0.4 + (collectability.score / 100) * 0.6;
+    const rawTaste = tasteScores[i] ?? 0;
+    // Normalize to 1-10 scale
+    const tasteScore = Math.max(1, Math.min(10, Math.round(rawTaste * 10)));
+    const collectabilityScore = collectability.score; // already 1-10 from computeCollectability
+    const combinedScore = Math.max(1, Math.min(10, Math.round(tasteScore * 0.4 + collectabilityScore * 0.6)));
 
     newSuggestions.push({
       userId,
@@ -124,7 +130,7 @@ async function probeSource(
       orderUrl: raw.orderUrl ?? null,
       sourceId: source.id,
       sourceName: source.sourceName,
-      collectabilityScore: collectability.score,
+      collectabilityScore,
       tasteScore,
       combinedScore,
       status: "new",
@@ -156,14 +162,16 @@ async function probeSource(
         for (let i = 0; i < inserted.length; i++) {
           const aiResult = aiScores[i];
           if (aiResult) {
-            const newCombined =
-              newSuggestions[i].tasteScore * 0.4 +
-              (aiResult.score / 100) * 0.6;
+            // AI scores are already 1-10
+            const aiCollectability = aiResult.score;
+            const newCombined = Math.max(1, Math.min(10, Math.round(
+              newSuggestions[i].tasteScore * 0.4 + aiCollectability * 0.6,
+            )));
 
             await db
               .update(aiSuggestions)
               .set({
-                collectabilityScore: aiResult.score,
+                collectabilityScore: aiCollectability,
                 combinedScore: newCombined,
                 updatedAt: new Date(),
               })

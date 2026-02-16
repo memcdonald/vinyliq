@@ -20,17 +20,17 @@ interface AICollectabilityInput {
   pressRun?: number | null;
   coloredVinyl?: boolean | null;
   specialPackaging?: string | null;
-  heuristicScore: number; // 0-100 from the basic heuristic
+  heuristicScore: number; // 1-10 from the basic heuristic
 }
 
 interface AICollectabilityResult {
-  score: number; // 0-100
+  score: number; // 1-10
   explanation: string;
 }
 
 const PROMPT_TEMPLATE = `You are a vinyl record collectability expert with deep knowledge of the record market, pressing history, label reputation, and artist demand.
 
-Evaluate the collectability of this vinyl release on a scale of 0-100:
+Evaluate the collectability of this vinyl release on a scale of 1-10:
 
 Title: {title}
 Artist: {artistName}
@@ -51,10 +51,10 @@ Consider these factors:
 - Current market trends and demand
 - Rarity signals
 
-The heuristic system scored this {heuristicScore}/100 based on physical attributes only. Your score should reflect the FULL picture including cultural and market factors.
+The heuristic system scored this {heuristicScore}/10 based on physical attributes only. Your score should reflect the FULL picture including cultural and market factors.
 
 Respond with ONLY valid JSON:
-{"score": <number 0-100>, "explanation": "<1-2 sentence explanation>"}`;
+{"score": <number 1-10>, "explanation": "<1-2 sentence explanation>"}`;
 
 export async function scoreCollectabilityWithAI(
   input: AICollectabilityInput,
@@ -126,17 +126,17 @@ export async function batchScoreCollectability(
         (item.year ? ` (${item.year})` : "") +
         (item.pressRun ? ` — ${item.pressRun} copies` : "") +
         (item.coloredVinyl ? " — colored vinyl" : "") +
-        ` [heuristic: ${item.heuristicScore}/100]`,
+        ` [heuristic: ${item.heuristicScore}/10]`,
     )
     .join("\n");
 
-  const batchPrompt = `You are a vinyl record collectability expert. Score each release's collectability (0-100) considering artist demand, label reputation, genre collectability, rarity, historical significance, and market trends.
+  const batchPrompt = `You are a vinyl record collectability expert. Score each release's collectability (1-10) considering artist demand, label reputation, genre collectability, rarity, historical significance, and market trends.
 
 Releases:
 ${numbered}
 
 Respond with ONLY a valid JSON array of objects, one per release in order:
-[{"score": <0-100>, "explanation": "<1-2 sentences>"}, ...]`;
+[{"score": <1-10>, "explanation": "<1-2 sentences>"}, ...]`;
 
   try {
     const text = anthropicKey
@@ -159,7 +159,7 @@ Respond with ONLY a valid JSON array of objects, one per release in order:
         typeof entry.explanation === "string"
       ) {
         return {
-          score: Math.max(0, Math.min(100, Math.round(entry.score))),
+          score: Math.max(1, Math.min(10, Math.round(entry.score))),
           explanation: entry.explanation,
         };
       }
@@ -258,7 +258,7 @@ function parseResult(text: string | null): AICollectabilityResult | null {
     const parsed = JSON.parse(jsonMatch[0]);
     if (typeof parsed.score === "number" && typeof parsed.explanation === "string") {
       return {
-        score: Math.max(0, Math.min(100, Math.round(parsed.score))),
+        score: Math.max(1, Math.min(10, Math.round(parsed.score))),
         explanation: parsed.explanation,
       };
     }

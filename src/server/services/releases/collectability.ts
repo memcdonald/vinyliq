@@ -10,7 +10,7 @@ interface CollectabilityInput {
 }
 
 interface CollectabilityResult {
-  score: number; // 0-100
+  score: number; // 1-10
   explanation: string;
 }
 
@@ -99,8 +99,12 @@ export function computeCollectability(input: CollectabilityInput): Collectabilit
     factors.push("Growing interest");
   }
 
+  // Normalize from 0-100 to 1-10
+  const clamped = Math.min(100, score);
+  const normalized = Math.max(1, Math.min(10, Math.round(clamped / 10)));
+
   return {
-    score: Math.min(100, score),
+    score: normalized,
     explanation: factors.length > 0
       ? factors.join(". ") + "."
       : "No collectability indicators found.",
