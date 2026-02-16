@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
-
 const nextConfig: NextConfig = {
+  output: "standalone",
   images: {
     remotePatterns: [
       { hostname: "i.discogs.com" },
@@ -10,5 +10,4 @@ const nextConfig: NextConfig = {
     ],
   },
 };
-
 export default nextConfig;

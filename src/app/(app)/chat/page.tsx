@@ -7,6 +7,7 @@ import { trpc } from "@/lib/trpc/client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { FunkySpinner } from "@/components/ui/funky-spinner";
 
 export default function ChatPage() {
   const [input, setInput] = useState("");
@@ -92,6 +93,7 @@ export default function ChatPage() {
       <div className="flex-1 overflow-y-auto py-4">
         {isLoading ? (
           <div className="space-y-4">
+            <FunkySpinner className="py-8" />
             {Array.from({ length: 3 }).map((_, i) => (
               <div key={i} className={cn("flex gap-3", i % 2 === 0 ? "justify-end" : "")}>
                 <Skeleton className="h-16 w-3/4 rounded-lg" />

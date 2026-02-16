@@ -9,7 +9,7 @@ export type TRPCContext = {
 };
 
 export async function createTRPCContext(): Promise<TRPCContext> {
-  const session = await auth.api.getSession({
+  const session = await auth().api.getSession({
     headers: await headers(),
   });
   return {

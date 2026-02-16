@@ -11,6 +11,7 @@ import {
   Music,
 } from "lucide-react";
 import Image from "next/image";
+import { FunkySpinner } from "@/components/ui/funky-spinner";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
 import { Button } from "@/components/ui/button";
@@ -172,6 +173,7 @@ export default function SuggestionsPage() {
 
       {isLoading ? (
         <div className="space-y-3">
+          <FunkySpinner className="py-8" />
           {Array.from({ length: 5 }).map((_, i) => (
             <SuggestionCardSkeleton key={i} />
           ))}

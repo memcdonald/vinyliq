@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { FunkySpinner } from '@/components/ui/funky-spinner';
 
 function RecommendationCardSkeleton() {
   return (
@@ -102,6 +103,7 @@ export default function DiscoverPage() {
           <Compass className="size-7 text-muted-foreground" />
           <h1 className="text-3xl font-bold tracking-tight font-sans-display">Discover</h1>
         </div>
+        <FunkySpinner className="py-8" />
         {Array.from({ length: 3 }).map((_, groupIdx) => (
           <div key={groupIdx} className="space-y-4">
             <Skeleton className="h-7 w-48" />

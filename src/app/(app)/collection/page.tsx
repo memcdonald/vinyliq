@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FunkySpinner } from "@/components/ui/funky-spinner";
 
 function CollectionSkeleton() {
   return (
@@ -193,7 +194,10 @@ export default function CollectionPage() {
       <CollectionStats />
 
       {isLoading ? (
-        <CollectionSkeleton />
+        <>
+          <FunkySpinner className="py-8" />
+          <CollectionSkeleton />
+        </>
       ) : items.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <Library className="mb-4 h-16 w-16 text-muted-foreground/40" />

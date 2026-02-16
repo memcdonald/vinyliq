@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     // -----------------------------------------------------------------------
     // 1. Validate the session
     // -----------------------------------------------------------------------
-    const session = await auth.api.getSession({
+    const session = await auth().api.getSession({
       headers: request.headers,
     });
 

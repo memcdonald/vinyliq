@@ -11,8 +11,8 @@ function optional(key: string, fallback: string = ""): string {
 }
 
 export const env = {
-  DATABASE_URL: required("DATABASE_URL"),
-  BETTER_AUTH_SECRET: required("BETTER_AUTH_SECRET"),
+  get DATABASE_URL() { return required("DATABASE_URL"); },
+  get BETTER_AUTH_SECRET() { return required("BETTER_AUTH_SECRET"); },
   BETTER_AUTH_URL: optional("BETTER_AUTH_URL", "http://localhost:3000"),
   DISCOGS_CONSUMER_KEY: optional("DISCOGS_CONSUMER_KEY"),
   DISCOGS_CONSUMER_SECRET: optional("DISCOGS_CONSUMER_SECRET"),
@@ -26,4 +26,4 @@ export const env = {
   OPENAI_API_KEY: optional("OPENAI_API_KEY"),
   AI_PROVIDER: optional("AI_PROVIDER", "claude"),
   NEXT_PUBLIC_BASE_URL: optional("NEXT_PUBLIC_BASE_URL", "http://localhost:3000"),
-} as const;
+};

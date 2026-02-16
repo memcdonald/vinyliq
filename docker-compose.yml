@@ -1,0 +1,16 @@
+services:
+  vinyliq:
+    build: .
+    container_name: vinyliq
+    restart: unless-stopped
+    env_file:
+      - .env.local
+    environment:
+      - BETTER_AUTH_URL=http://vinyliq.lab
+      - NEXT_PUBLIC_BETTER_AUTH_URL=http://vinyliq.lab
+    networks:
+      - lab
+
+networks:
+  lab:
+    external: true

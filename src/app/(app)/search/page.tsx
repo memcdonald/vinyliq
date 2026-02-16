@@ -7,6 +7,7 @@ import { trpc } from '@/lib/trpc/client';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { FunkySpinner } from '@/components/ui/funky-spinner';
 import { AlbumCard } from '@/components/album-card';
 
 function SearchPageContent() {
@@ -84,6 +85,8 @@ function SearchPageContent() {
 
       {/* Loading state */}
       {q && isLoading && (
+        <>
+        <FunkySpinner className="py-8" />
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
           {Array.from({ length: 24 }).map((_, i) => (
             <div key={i} className="space-y-2">
@@ -94,6 +97,7 @@ function SearchPageContent() {
             </div>
           ))}
         </div>
+        </>
       )}
 
       {/* Error state */}

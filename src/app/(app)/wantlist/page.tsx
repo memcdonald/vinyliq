@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FunkySpinner } from "@/components/ui/funky-spinner";
 import { ShareButton } from "@/components/share-button";
 
 function WantlistSkeleton() {
@@ -65,7 +66,10 @@ export default function WantlistPage() {
       </div>
 
       {isLoading ? (
-        <WantlistSkeleton />
+        <>
+          <FunkySpinner className="py-8" />
+          <WantlistSkeleton />
+        </>
       ) : items.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <Heart className="mb-4 h-16 w-16 text-muted-foreground/40" />

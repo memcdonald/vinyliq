@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FunkySpinner } from "@/components/ui/funky-spinner";
 import { Card } from "@/components/ui/card";
 import { ReleaseCard } from "@/components/release-card";
 import { AddReleaseDialog } from "@/components/add-release-dialog";
@@ -140,7 +141,10 @@ export default function ReleasesPage() {
       </div>
 
       {isLoading ? (
-        <ReleasesSkeleton />
+        <>
+          <FunkySpinner className="py-8" />
+          <ReleasesSkeleton />
+        </>
       ) : items.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <Rss className="mb-4 h-16 w-16 text-muted-foreground/40" />
