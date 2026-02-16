@@ -17,6 +17,21 @@ import { filterToAlbums } from "./validate";
 const rssAdapter = new RssAdapter();
 const urlAdapter = new UrlAdapter();
 
+export interface ProbeProgress {
+  total: number;
+  completed: number;
+  currentSource: string;
+  discovered: number;
+  status: "running" | "completed" | "error";
+  message: string;
+}
+
+const probeProgressMap = new Map<string, ProbeProgress>();
+
+export function getProbeProgress(userId: string): ProbeProgress | null {
+  return probeProgressMap.get(userId) ?? null;
+}
+
 interface ProbeResult {
   sourceName: string;
   discovered: number;
@@ -217,22 +232,47 @@ export async function probeAllSources(
   // Only probe sources that have a URL
   const probeable = sources.filter((s) => s.url);
 
+  const progress: ProbeProgress = {
+    total: probeable.length,
+    completed: 0,
+    currentSource: "",
+    discovered: 0,
+    status: "running",
+    message: `Probing ${probeable.length} source${probeable.length === 1 ? "" : "s"}...`,
+  };
+  probeProgressMap.set(userId, progress);
+
   const results: ProbeResult[] = [];
   let totalDiscovered = 0;
 
-  for (const source of probeable) {
-    try {
-      const result = await probeSource(source, userId, keys);
-      results.push(result);
-      totalDiscovered += result.discovered;
-    } catch {
-      console.error(`Failed to probe source ${source.sourceName}`);
-      results.push({
-        sourceName: source.sourceName,
-        discovered: 0,
-        explained: 0,
-      });
+  try {
+    for (const source of probeable) {
+      progress.currentSource = source.sourceName;
+      progress.message = `Probing ${source.sourceName}...`;
+
+      try {
+        const result = await probeSource(source, userId, keys);
+        results.push(result);
+        totalDiscovered += result.discovered;
+        progress.discovered = totalDiscovered;
+      } catch {
+        console.error(`Failed to probe source ${source.sourceName}`);
+        results.push({
+          sourceName: source.sourceName,
+          discovered: 0,
+          explained: 0,
+        });
+      }
+
+      progress.completed++;
     }
+
+    progress.status = "completed";
+    progress.currentSource = "";
+    progress.message = `Done: ${totalDiscovered} new suggestion${totalDiscovered === 1 ? "" : "s"} found`;
+  } catch (err) {
+    progress.status = "error";
+    progress.message = err instanceof Error ? err.message : "Probe failed";
   }
 
   return { results, totalDiscovered };

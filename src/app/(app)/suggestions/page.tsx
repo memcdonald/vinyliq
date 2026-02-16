@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Sparkles,
   ThumbsUp,
@@ -53,6 +53,63 @@ function SuggestionCardSkeleton() {
   );
 }
 
+function ProbeProgress() {
+  const utils = trpc.useUtils();
+  const { data: progress } = trpc.suggestions.getProbeProgress.useQuery(
+    undefined,
+    { refetchInterval: 1000 },
+  );
+
+  const prevStatus = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (
+      prevStatus.current === "running" &&
+      progress?.status === "completed"
+    ) {
+      toast.success(
+        `Probe complete: ${progress.discovered} new suggestion${progress.discovered === 1 ? "" : "s"} found`,
+      );
+      utils.suggestions.getAll.invalidate();
+      utils.suggestions.getStats.invalidate();
+    }
+    if (progress?.status) {
+      prevStatus.current = progress.status;
+    }
+  }, [progress?.status, progress?.discovered, utils]);
+
+  if (!progress || progress.status === "completed") return null;
+
+  const pct =
+    progress.total > 0
+      ? Math.round((progress.completed / progress.total) * 100)
+      : 0;
+
+  return (
+    <div className="mb-4 space-y-1.5">
+      <div className="flex items-center justify-between text-xs">
+        <span className="flex items-center gap-1.5 text-muted-foreground">
+          {progress.status === "running" && (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          )}
+          {progress.message}
+        </span>
+        <span className="font-mono text-muted-foreground">
+          {progress.completed}/{progress.total}
+          {progress.discovered > 0 &&
+            ` · ${progress.discovered} found`}
+        </span>
+      </div>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+        <div
+          className="h-full rounded-full bg-primary transition-all duration-300"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function SuggestionsPage() {
   const [filter, setFilter] = useState<StatusFilter>("new");
   const [sortBy, setSortBy] = useState<SortBy>("combined");
@@ -65,13 +122,6 @@ export default function SuggestionsPage() {
   const utils = trpc.useUtils();
 
   const probeMutation = trpc.suggestions.probe.useMutation({
-    onSuccess: (data) => {
-      toast.success(
-        `Probe complete: ${data.totalDiscovered} new suggestions found`,
-      );
-      utils.suggestions.getAll.invalidate();
-      utils.suggestions.getStats.invalidate();
-    },
     onError: (error) => {
       toast.error("Probe failed", { description: error.message });
     },
@@ -169,6 +219,8 @@ export default function SuggestionsPage() {
           ))}
         </div>
       </div>
+
+      <ProbeProgress />
 
       {isLoading ? (
         <div className="space-y-3">

@@ -3,7 +3,7 @@ import { eq, and, desc, sql, count, isNotNull } from "drizzle-orm";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { db } from "@/server/db";
 import { aiSuggestions } from "@/server/db/schema";
-import { probeAllSources } from "@/server/services/suggestions/probe";
+import { probeAllSources, getProbeProgress } from "@/server/services/suggestions/probe";
 
 export const suggestionsRouter = createTRPCRouter({
   getAll: protectedProcedure
@@ -73,7 +73,14 @@ export const suggestionsRouter = createTRPCRouter({
     }),
 
   probe: protectedProcedure.mutation(async ({ ctx }) => {
-    return probeAllSources(ctx.userId);
+    probeAllSources(ctx.userId).catch((err) => {
+      console.error("[Probe] fire-and-forget error:", err);
+    });
+    return { started: true };
+  }),
+
+  getProbeProgress: protectedProcedure.query(({ ctx }) => {
+    return getProbeProgress(ctx.userId);
   }),
 
   getStats: protectedProcedure.query(async ({ ctx }) => {
