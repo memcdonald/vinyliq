@@ -21,7 +21,7 @@ import {
   getSpotifyImportProgress,
 } from "@/server/services/spotify/import";
 import { seedTasteFromSpotify } from "@/server/services/spotify/taste-seed";
-import { analyzePreferencesWithAI } from "@/server/services/spotify/preference-analysis";
+import { analyzePreferencesWithAI, adjustAnalysisWithAI } from "@/server/services/spotify/preference-analysis";
 import { updateTasteProfile } from "@/server/recommendation/taste-profile";
 import { getSiteConfig } from "@/server/services/site-config";
 import type { SpotifyPreferenceAnalysis } from "@/server/services/spotify/types";
@@ -467,4 +467,29 @@ export const settingsRouter = createTRPCRouter({
 
     return existing.aiPreferenceAnalysis as SpotifyPreferenceAnalysis;
   }),
+
+  // -------------------------------------------------------------------------
+  // Adjust taste profile via AI
+  // -------------------------------------------------------------------------
+  adjustTasteProfile: protectedProcedure
+    .input(z.object({ adjustments: z.string().min(1).max(2000) }))
+    .mutation(async ({ ctx, input }) => {
+      // Fetch current analysis
+      const [existing] = await db
+        .select({ aiPreferenceAnalysis: userTasteProfiles.aiPreferenceAnalysis })
+        .from(userTasteProfiles)
+        .where(eq(userTasteProfiles.userId, ctx.userId))
+        .limit(1);
+
+      if (!existing?.aiPreferenceAnalysis) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No existing taste analysis to adjust. Run 'Analyze My Taste' first.",
+        });
+      }
+
+      const currentAnalysis = existing.aiPreferenceAnalysis as SpotifyPreferenceAnalysis;
+      const updated = await adjustAnalysisWithAI(ctx.userId, currentAnalysis, input.adjustments);
+      return updated;
+    }),
 });

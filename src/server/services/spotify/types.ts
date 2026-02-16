@@ -127,6 +127,8 @@ export interface SpotifyPreferenceAnalysis {
   eras: string[];
   keyInsights: string[];
   vinylRecommendations: string[];
+  collectionHighlights: string[];
+  listeningPersonality: string;
   analyzedAt: string; // ISO date string
 }
 

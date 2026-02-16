@@ -12,6 +12,10 @@ import {
   Loader2,
   RefreshCw,
   Brain,
+  Sparkles,
+  Send,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -25,6 +29,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { useSession } from "@/server/auth/client";
 import { trpc } from "@/lib/trpc/client";
 
@@ -67,8 +72,6 @@ function ImportProgress({ service }: { service: "discogs" | "spotify" }) {
 function SettingsContent() {
   const searchParams = useSearchParams();
   const { data: session } = useSession();
-  const [importingDiscogs, setImportingDiscogs] = useState(false);
-  const [importingSpotify, setImportingSpotify] = useState(false);
 
   const connectedAccounts = trpc.settings.getConnectedAccounts.useQuery();
   const utils = trpc.useUtils();
@@ -96,7 +99,6 @@ function SettingsContent() {
   const importDiscogs = trpc.settings.importDiscogsCollection.useMutation({
     onSuccess: (data) => {
       toast.success(data.message);
-      setImportingDiscogs(true);
     },
     onError: (error) => {
       toast.error(`Import failed: ${error.message}`);
@@ -106,7 +108,6 @@ function SettingsContent() {
   const importSpotify = trpc.settings.importSpotifyLibrary.useMutation({
     onSuccess: (data) => {
       toast.success(data.message);
-      setImportingSpotify(true);
     },
     onError: (error) => {
       toast.error(`Import failed: ${error.message}`);
@@ -198,6 +199,9 @@ function SettingsContent() {
         </CardContent>
       </Card>
 
+      {/* Taste Profile Section — ABOVE Connected Accounts */}
+      <TasteProfileCard />
+
       {/* Connected Accounts Section */}
       <Card>
         <CardHeader>
@@ -251,7 +255,7 @@ function SettingsContent() {
                     Disconnect
                   </Button>
                 </div>
-                {importingDiscogs && <ImportProgress service="discogs" />}
+                <ImportProgress service="discogs" />
               </div>
             ) : (
               <div className="space-y-1">
@@ -313,7 +317,7 @@ function SettingsContent() {
                     Disconnect
                   </Button>
                 </div>
-                {importingSpotify && <ImportProgress service="spotify" />}
+                <ImportProgress service="spotify" />
               </div>
             ) : (
               <div className="space-y-1">
@@ -333,15 +337,15 @@ function SettingsContent() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Taste Profile Section */}
-      <TasteProfileCard />
     </div>
   );
 }
 
 function TasteProfileCard() {
-  const { data: taste, isLoading } = trpc.settings.getTasteProfile.useQuery();
+  const { data: taste, isLoading: tasteLoading } = trpc.settings.getTasteProfile.useQuery();
+  const { data: aiAnalysis, isLoading: analysisLoading } = trpc.settings.getSpotifyPreferenceAnalysis.useQuery();
+  const [showAdjust, setShowAdjust] = useState(false);
+  const [adjustmentText, setAdjustmentText] = useState("");
   const utils = trpc.useUtils();
 
   const refreshMutation = trpc.settings.refreshTasteProfile.useMutation({
@@ -356,6 +360,31 @@ function TasteProfileCard() {
     },
   });
 
+  const analyzeMutation = trpc.settings.analyzeSpotifyPreferences.useMutation({
+    onSuccess: () => {
+      toast.success("Taste analysis complete!");
+      utils.settings.getSpotifyPreferenceAnalysis.invalidate();
+    },
+    onError: (error) => {
+      toast.error(`Analysis failed: ${error.message}`);
+    },
+  });
+
+  const adjustMutation = trpc.settings.adjustTasteProfile.useMutation({
+    onSuccess: () => {
+      toast.success("Taste profile adjusted!");
+      utils.settings.getSpotifyPreferenceAnalysis.invalidate();
+      setAdjustmentText("");
+      setShowAdjust(false);
+    },
+    onError: (error) => {
+      toast.error(`Adjustment failed: ${error.message}`);
+    },
+  });
+
+  const isLoading = tasteLoading || analysisLoading;
+  const hasAnyData = taste || aiAnalysis;
+
   return (
     <Card>
       <CardHeader>
@@ -366,74 +395,295 @@ function TasteProfileCard() {
               Taste Profile
             </CardTitle>
             <CardDescription>
-              Your musical preferences — built from your collection and Spotify listening history
+              Your musical identity — built from your collection, Spotify, and conversations
             </CardDescription>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refreshMutation.mutate()}
-            disabled={refreshMutation.isPending}
-          >
-            <RefreshCw
-              className={`mr-1.5 size-4 ${refreshMutation.isPending ? "animate-spin" : ""}`}
-            />
-            Refresh
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading taste profile...</p>
-        ) : !taste ? (
-          <div className="text-center py-6">
-            <p className="text-sm text-muted-foreground mb-3">
-              No taste profile yet. Connect Spotify or add albums to your collection, then hit Refresh.
-            </p>
+          <div className="flex gap-1.5">
             <Button
+              variant="outline"
               size="sm"
               onClick={() => refreshMutation.mutate()}
               disabled={refreshMutation.isPending}
+              title="Recompute genre/artist weights from collection"
             >
-              {refreshMutation.isPending ? (
-                <Loader2 className="mr-1.5 size-4 animate-spin" />
-              ) : (
-                <Brain className="mr-1.5 size-4" />
-              )}
-              Build Taste Profile
+              <RefreshCw
+                className={`mr-1.5 size-4 ${refreshMutation.isPending ? "animate-spin" : ""}`}
+              />
+              Refresh
             </Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground">Loading taste profile...</p>
+        ) : !hasAnyData ? (
+          <div className="text-center py-6">
+            <p className="text-sm text-muted-foreground mb-3">
+              No taste profile yet. Connect Spotify or add albums to your collection, then analyze your taste.
+            </p>
+            <div className="flex justify-center gap-2">
+              <Button
+                size="sm"
+                onClick={() => refreshMutation.mutate()}
+                disabled={refreshMutation.isPending}
+              >
+                {refreshMutation.isPending ? (
+                  <Loader2 className="mr-1.5 size-4 animate-spin" />
+                ) : (
+                  <Brain className="mr-1.5 size-4" />
+                )}
+                Build Taste Profile
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => analyzeMutation.mutate()}
+                disabled={analyzeMutation.isPending}
+              >
+                {analyzeMutation.isPending ? (
+                  <Loader2 className="mr-1.5 size-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-1.5 size-4" />
+                )}
+                Analyze My Taste
+              </Button>
+            </div>
           </div>
         ) : (
           <>
-            {taste.topGenres.length > 0 && (
-              <div>
-                <h4 className="text-xs font-medium text-muted-foreground mb-2">Top Genres</h4>
-                <div className="flex flex-wrap gap-1.5">
-                  {taste.topGenres.map((g) => (
-                    <Badge key={g.genre} variant="secondary" className="text-xs">
-                      {g.genre}
-                      <span className="ml-1 opacity-60">{g.weight}%</span>
-                    </Badge>
-                  ))}
+            {/* AI Analysis Section */}
+            {aiAnalysis ? (
+              <div className="space-y-4">
+                {/* Personality Label */}
+                {aiAnalysis.listeningPersonality && (
+                  <div className="text-center">
+                    <span className="text-lg font-semibold tracking-tight">
+                      {aiAnalysis.listeningPersonality}
+                    </span>
+                  </div>
+                )}
+
+                {/* Summary */}
+                {aiAnalysis.summary && (
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {aiAnalysis.summary}
+                  </p>
+                )}
+
+                {/* Genre + Mood Badges */}
+                {aiAnalysis.topGenres.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-medium text-muted-foreground mb-2">Genres</h4>
+                    <div className="flex flex-wrap gap-1.5">
+                      {aiAnalysis.topGenres.map((g) => (
+                        <Badge key={g} variant="secondary" className="text-xs">
+                          {g}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {aiAnalysis.moods.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-medium text-muted-foreground mb-2">Moods</h4>
+                    <div className="flex flex-wrap gap-1.5">
+                      {aiAnalysis.moods.map((m) => (
+                        <Badge key={m} variant="outline" className="text-xs">
+                          {m}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {aiAnalysis.eras.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-medium text-muted-foreground mb-2">Eras</h4>
+                    <div className="flex flex-wrap gap-1.5">
+                      {aiAnalysis.eras.map((e) => (
+                        <Badge key={e} variant="outline" className="text-xs">
+                          {e}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Key Insights */}
+                {aiAnalysis.keyInsights.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-medium text-muted-foreground mb-2">Key Insights</h4>
+                    <ul className="space-y-1">
+                      {aiAnalysis.keyInsights.map((insight, i) => (
+                        <li key={i} className="text-sm text-muted-foreground flex gap-2">
+                          <span className="text-muted-foreground/40">•</span>
+                          {insight}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Collection Highlights */}
+                {aiAnalysis.collectionHighlights && aiAnalysis.collectionHighlights.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-medium text-muted-foreground mb-2">Collection Highlights</h4>
+                    <ul className="space-y-1">
+                      {aiAnalysis.collectionHighlights.map((highlight, i) => (
+                        <li key={i} className="text-sm text-muted-foreground flex gap-2">
+                          <span className="text-muted-foreground/40">•</span>
+                          {highlight}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Vinyl Recommendations */}
+                {aiAnalysis.vinylRecommendations.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-medium text-muted-foreground mb-2">Vinyl Recommendations</h4>
+                    <div className="flex flex-wrap gap-1.5">
+                      {aiAnalysis.vinylRecommendations.map((rec) => (
+                        <Badge key={rec} variant="secondary" className="text-xs font-normal">
+                          {rec}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <Separator />
+
+                {/* Action buttons */}
+                <div className="flex items-center justify-between">
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => analyzeMutation.mutate()}
+                      disabled={analyzeMutation.isPending}
+                    >
+                      {analyzeMutation.isPending ? (
+                        <Loader2 className="mr-1.5 size-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="mr-1.5 size-4" />
+                      )}
+                      Re-analyze
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setShowAdjust(!showAdjust)}
+                    >
+                      {showAdjust ? (
+                        <ChevronUp className="mr-1.5 size-4" />
+                      ) : (
+                        <ChevronDown className="mr-1.5 size-4" />
+                      )}
+                      Adjust
+                    </Button>
+                  </div>
+                  {aiAnalysis.analyzedAt && (
+                    <p className="text-[10px] text-muted-foreground/60">
+                      Analyzed: {new Date(aiAnalysis.analyzedAt).toLocaleDateString()}
+                    </p>
+                  )}
                 </div>
+
+                {/* Adjust input */}
+                {showAdjust && (
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="e.g. I'm more into jazz lately, less pop..."
+                      value={adjustmentText}
+                      onChange={(e) => setAdjustmentText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && adjustmentText.trim()) {
+                          adjustMutation.mutate({ adjustments: adjustmentText.trim() });
+                        }
+                      }}
+                      disabled={adjustMutation.isPending}
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        if (adjustmentText.trim()) {
+                          adjustMutation.mutate({ adjustments: adjustmentText.trim() });
+                        }
+                      }}
+                      disabled={!adjustmentText.trim() || adjustMutation.isPending}
+                    >
+                      {adjustMutation.isPending ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Send className="size-4" />
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* No AI analysis yet, but we have numerical taste data */
+              <div className="space-y-4">
+                <div className="text-center py-3">
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Get a rich AI-powered analysis of your musical personality.
+                  </p>
+                  <Button
+                    size="sm"
+                    onClick={() => analyzeMutation.mutate()}
+                    disabled={analyzeMutation.isPending}
+                  >
+                    {analyzeMutation.isPending ? (
+                      <Loader2 className="mr-1.5 size-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="mr-1.5 size-4" />
+                    )}
+                    Analyze My Taste
+                  </Button>
+                </div>
+
+                <Separator />
               </div>
             )}
-            {taste.topArtists.length > 0 && (
-              <div>
-                <h4 className="text-xs font-medium text-muted-foreground mb-2">Top Artists</h4>
-                <div className="flex flex-wrap gap-1.5">
-                  {taste.topArtists.map((a) => (
-                    <Badge key={a} variant="outline" className="text-xs">
-                      {a}
-                    </Badge>
-                  ))}
-                </div>
+
+            {/* Numerical taste data (always shown if available) */}
+            {taste && (
+              <div className="space-y-4">
+                {taste.topGenres.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-medium text-muted-foreground mb-2">Top Genres (by weight)</h4>
+                    <div className="flex flex-wrap gap-1.5">
+                      {taste.topGenres.map((g) => (
+                        <Badge key={g.genre} variant="secondary" className="text-xs">
+                          {g.genre}
+                          <span className="ml-1 opacity-60">{g.weight}%</span>
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {taste.topArtists.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-medium text-muted-foreground mb-2">Top Artists</h4>
+                    <div className="flex flex-wrap gap-1.5">
+                      {taste.topArtists.map((a) => (
+                        <Badge key={a} variant="outline" className="text-xs">
+                          {a}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {taste.computedAt && (
+                  <p className="text-[10px] text-muted-foreground/60">
+                    Weights updated: {new Date(taste.computedAt).toLocaleDateString()}
+                  </p>
+                )}
               </div>
-            )}
-            {taste.computedAt && (
-              <p className="text-[10px] text-muted-foreground/60">
-                Last updated: {new Date(taste.computedAt).toLocaleDateString()}
-              </p>
             )}
           </>
         )}
