@@ -251,12 +251,19 @@ export async function probeAllSources(
       progress.message = `Probing ${source.sourceName}...`;
 
       try {
-        const result = await probeSource(source, userId, keys);
+        const result = await Promise.race([
+          probeSource(source, userId, keys),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("timeout")), 60_000),
+          ),
+        ]);
         results.push(result);
         totalDiscovered += result.discovered;
         progress.discovered = totalDiscovered;
-      } catch {
-        console.error(`Failed to probe source ${source.sourceName}`);
+      } catch (err) {
+        const reason = err instanceof Error && err.message === "timeout"
+          ? "timed out" : "failed";
+        console.error(`Probe source ${source.sourceName} ${reason}`);
         results.push({
           sourceName: source.sourceName,
           discovered: 0,
