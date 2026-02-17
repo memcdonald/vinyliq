@@ -28,6 +28,12 @@ interface AICollectabilityResult {
   explanation: string;
 }
 
+export interface TasteContext {
+  topGenres: string;
+  topArtists: string;
+  recommendationPrompt: string | null;
+}
+
 const PROMPT_TEMPLATE = `You are a vinyl record collectability expert with deep knowledge of the record market, pressing history, label reputation, and artist demand.
 
 Evaluate the collectability of this vinyl release on a scale of 1-10:
@@ -107,6 +113,7 @@ export async function scoreCollectabilityWithAI(
 export async function batchScoreCollectability(
   items: AICollectabilityInput[],
   keys: ResolvedKeys,
+  tasteContext?: TasteContext,
 ): Promise<(AICollectabilityResult | null)[]> {
   if (items.length === 0) return [];
 
@@ -130,7 +137,16 @@ export async function batchScoreCollectability(
     )
     .join("\n");
 
-  const batchPrompt = `You are a vinyl record collectability expert. Score each release's collectability (1-10) considering artist demand, label reputation, genre collectability, rarity, historical significance, and market trends.
+  let tasteSection = "";
+  if (tasteContext) {
+    tasteSection = `\n\nCollector's taste profile:
+- Top genres: ${tasteContext.topGenres || "Not enough data"}
+- Favorite artists: ${tasteContext.topArtists || "Not enough data"}${tasteContext.recommendationPrompt ? `\n\nCollector's guidance: ${tasteContext.recommendationPrompt}` : ""}
+
+Consider taste alignment alongside market factors when scoring. Releases that match the collector's taste AND have strong collectability indicators should score higher.`;
+  }
+
+  const batchPrompt = `You are a vinyl record collectability expert. Score each release's collectability (1-10) considering artist demand, label reputation, genre collectability, rarity, historical significance, and market trends.${tasteSection}
 
 Releases:
 ${numbered}

@@ -20,7 +20,7 @@ interface SuggestionForExplanation {
  * Generate AI explanations for suggestions that don't have one yet.
  * Returns the number of suggestions explained.
  */
-export async function batchExplain(userId: string, keys?: ResolvedKeys): Promise<number> {
+export async function batchExplain(userId: string, keys?: ResolvedKeys, recommendationPrompt?: string | null): Promise<number> {
   // Get suggestions without explanations
   const unexplained = await db
     .select({
@@ -57,6 +57,7 @@ export async function batchExplain(userId: string, keys?: ResolvedKeys): Promise
     topGenres,
     topArtists,
     keys,
+    recommendationPrompt,
   );
 
   let explained = 0;
@@ -79,8 +80,9 @@ async function generateExplanations(
   topGenres: string,
   topArtists: string,
   keys?: ResolvedKeys,
+  recommendationPrompt?: string | null,
 ): Promise<(string | null)[]> {
-  const prompt = buildBatchPrompt(suggestions, topGenres, topArtists);
+  const prompt = buildBatchPrompt(suggestions, topGenres, topArtists, recommendationPrompt);
 
   const anthropicKey = keys?.anthropicKey ?? "";
   const openaiKey = keys?.openaiKey ?? "";
@@ -101,6 +103,7 @@ function buildBatchPrompt(
   suggestions: SuggestionForExplanation[],
   topGenres: string,
   topArtists: string,
+  recommendationPrompt?: string | null,
 ): string {
   const items = suggestions
     .map(
@@ -113,7 +116,7 @@ function buildBatchPrompt(
 
   return `You are a vinyl record expert advisor. A collector's taste profile shows:
 - Top genres: ${topGenres || "Not enough data yet"}
-- Favorite artists: ${topArtists || "Not enough data yet"}
+- Favorite artists: ${topArtists || "Not enough data yet"}${recommendationPrompt ? `\n\nCollector's guidance: ${recommendationPrompt}` : ""}
 
 For each suggested release below, write a 1-2 sentence recommendation note explaining:
 1. Why this album fits the collector's taste — reference specific genres or artists from their profile

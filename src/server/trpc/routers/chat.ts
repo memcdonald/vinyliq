@@ -5,13 +5,15 @@ import {
   getChatHistory,
   clearChatHistory,
 } from "@/server/services/ai/chat";
-import { isAIConfigured } from "@/server/services/ai";
+import { isAIConfiguredWithKeys } from "@/server/services/ai";
+import { getUserApiKeys } from "@/server/services/ai/keys";
 
 export const chatRouter = createTRPCRouter({
   sendMessage: protectedProcedure
     .input(z.object({ message: z.string().min(1).max(4000) }))
     .mutation(async ({ ctx, input }) => {
-      if (!isAIConfigured()) {
+      const keys = await getUserApiKeys(ctx.userId);
+      if (!isAIConfiguredWithKeys(keys)) {
         return {
           content:
             "AI is not configured. Please add an API key on the Credentials page.",

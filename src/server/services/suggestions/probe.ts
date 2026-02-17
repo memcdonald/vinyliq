@@ -3,13 +3,15 @@ import { db } from "@/server/db";
 import {
   dataSources,
   aiSuggestions,
+  user,
   type DataSource,
 } from "@/server/db/schema";
 import { RssAdapter } from "@/server/services/releases/rss-adapter";
 import { UrlAdapter } from "@/server/services/releases/url-adapter";
 import { computeCollectability } from "@/server/services/releases/collectability";
-import { batchScoreCollectability } from "@/server/services/releases/ai-collectability";
+import { batchScoreCollectability, type TasteContext } from "@/server/services/releases/ai-collectability";
 import { getUserApiKeys, type ResolvedKeys } from "@/server/services/ai/keys";
+import { getTasteProfile, topN } from "@/server/recommendation/taste-profile";
 import { scoreTasteMatch } from "./taste-match";
 import { batchExplain } from "./ai-explain";
 import { filterToAlbums } from "./validate";
@@ -46,6 +48,8 @@ async function probeSource(
   source: DataSource,
   userId: string,
   keys?: ResolvedKeys,
+  tasteContext?: TasteContext,
+  recommendationPrompt?: string | null,
 ): Promise<ProbeResult> {
   if (!source.url) {
     return { sourceName: source.sourceName, discovered: 0, explained: 0 };
@@ -154,17 +158,22 @@ async function probeSource(
     existingKeys.add(key);
   }
 
+  // Quality threshold: filter out low-quality results
+  const qualitySuggestions = newSuggestions.filter(
+    (s) => s.combinedScore >= 4 || s.tasteScore >= 6,
+  );
+
   // Batch insert
-  if (newSuggestions.length > 0) {
+  if (qualitySuggestions.length > 0) {
     const inserted = await db
       .insert(aiSuggestions)
-      .values(newSuggestions)
+      .values(qualitySuggestions)
       .returning({ id: aiSuggestions.id });
 
     // AI collectability scoring (replaces heuristic-only scores)
     if (keys && (keys.anthropicKey || keys.openaiKey)) {
       try {
-        const toScore = newSuggestions.map((s) => ({
+        const toScore = qualitySuggestions.map((s) => ({
           title: s.title,
           artistName: s.artistName,
           labelName: s.labelName,
@@ -172,7 +181,7 @@ async function probeSource(
           heuristicScore: s.collectabilityScore,
         }));
 
-        const aiScores = await batchScoreCollectability(toScore, keys);
+        const aiScores = await batchScoreCollectability(toScore, keys, tasteContext);
 
         for (let i = 0; i < inserted.length; i++) {
           const aiResult = aiScores[i];
@@ -180,7 +189,7 @@ async function probeSource(
             // AI scores are already 1-10
             const aiCollectability = aiResult.score;
             const newCombined = Math.max(1, Math.min(10, Math.round(
-              newSuggestions[i].tasteScore * 0.4 + aiCollectability * 0.6,
+              qualitySuggestions[i].tasteScore * 0.4 + aiCollectability * 0.6,
             )));
 
             await db
@@ -201,13 +210,13 @@ async function probeSource(
 
   // Generate AI explanations for new suggestions
   let explained = 0;
-  if (newSuggestions.length > 0) {
-    explained = await batchExplain(userId, keys);
+  if (qualitySuggestions.length > 0) {
+    explained = await batchExplain(userId, keys, recommendationPrompt);
   }
 
   return {
     sourceName: source.sourceName,
-    discovered: newSuggestions.length,
+    discovered: qualitySuggestions.length,
     explained,
   };
 }
@@ -219,6 +228,23 @@ export async function probeAllSources(
   userId: string,
 ): Promise<{ results: ProbeResult[]; totalDiscovered: number }> {
   const keys = await getUserApiKeys(userId);
+
+  // Fetch user's recommendation prompt
+  const [prefs] = await db
+    .select({ recommendationPrompt: user.recommendationPrompt })
+    .from(user)
+    .where(eq(user.id, userId));
+  const recommendationPrompt = prefs?.recommendationPrompt ?? null;
+
+  // Build taste context for AI scoring
+  const profile = await getTasteProfile(userId);
+  const topGenres = topN(profile.genreWeights, 5)
+    .map(([g, w]) => `${g} (${(w * 100).toFixed(0)}%)`)
+    .join(", ");
+  const topArtists = topN(profile.artistWeights, 5)
+    .map(([a]) => a)
+    .join(", ");
+  const tasteContext: TasteContext = { topGenres, topArtists, recommendationPrompt };
 
   const sources = await db
     .select()
@@ -252,7 +278,7 @@ export async function probeAllSources(
 
       try {
         const result = await Promise.race([
-          probeSource(source, userId, keys),
+          probeSource(source, userId, keys, tasteContext, recommendationPrompt),
           new Promise<never>((_, reject) =>
             setTimeout(() => reject(new Error("timeout")), 60_000),
           ),

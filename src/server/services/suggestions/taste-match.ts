@@ -49,6 +49,18 @@ export async function scoreTasteMatch(
       }
     }
 
+    // Genre keyword match from description
+    if (release.description && Object.keys(profile.genreWeights).length > 0) {
+      const descLower = release.description.toLowerCase();
+      for (const [genre, weight] of Object.entries(profile.genreWeights)) {
+        if (descLower.includes(genre.toLowerCase())) {
+          score += weight * 1.0;
+          factors++;
+          break;
+        }
+      }
+    }
+
     // If still no matches, give a small base score based on profile richness
     if (factors === 0) {
       const profileSize =
