@@ -1,15 +1,20 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { CalendarClock, RefreshCw, Rss, Search } from "lucide-react";
+import {
+  CalendarClock,
+  RefreshCw,
+  Rss,
+  Search,
+  Heart,
+  ExternalLink,
+} from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FunkySpinner } from "@/components/ui/funky-spinner";
-import { Card } from "@/components/ui/card";
-import { ReleaseCard } from "@/components/release-card";
 import { AddReleaseDialog } from "@/components/add-release-dialog";
 import { ManageSourcesSheet } from "@/components/manage-sources-sheet";
 import { CsvImportDialog } from "@/components/csv-import-dialog";
@@ -17,18 +22,23 @@ import { CsvImportDialog } from "@/components/csv-import-dialog";
 type SortBy = "date" | "collectability" | "title" | "artist";
 type StatusFilter = "upcoming" | "released" | "archived" | undefined;
 
-function ReleasesSkeleton() {
+function ScoreCell({ score }: { score: number | null }) {
+  if (score === null || score === undefined) return <span className="text-muted-foreground">--</span>;
+  const val = Math.round(score);
+  const color =
+    val >= 7
+      ? "text-success"
+      : val >= 4
+        ? "text-acid-halo"
+        : "text-muted-foreground";
+  return <span className={`font-semibold tabular-nums ${color}`}>{val}/10</span>;
+}
+
+function TableSkeleton() {
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-      {Array.from({ length: 10 }).map((_, i) => (
-        <Card key={i} className="overflow-hidden py-0">
-          <Skeleton className="aspect-square w-full" />
-          <div className="space-y-2 p-3">
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-3 w-1/2" />
-            <Skeleton className="h-3 w-1/3" />
-          </div>
-        </Card>
+    <div className="space-y-2">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <Skeleton key={i} className="h-12 w-full rounded-md" />
       ))}
     </div>
   );
@@ -59,6 +69,16 @@ export default function ReleasesPage() {
   });
 
   const utils = trpc.useUtils();
+
+  const addMutation = trpc.collection.add.useMutation({
+    onSuccess: (_, vars) => {
+      toast.success(`Added to wantlist`);
+      utils.collection.getAll.invalidate();
+    },
+    onError: (error) => {
+      toast.error("Failed to add to wantlist", { description: error.message });
+    },
+  });
 
   function handleRefresh() {
     fetchAllMutation.mutate(undefined, {
@@ -164,7 +184,7 @@ export default function ReleasesPage() {
       {isLoading ? (
         <>
           <FunkySpinner className="py-8" />
-          <ReleasesSkeleton />
+          <TableSkeleton />
         </>
       ) : items.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -179,23 +199,101 @@ export default function ReleasesPage() {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-          {items.map((item) => (
-            <ReleaseCard
-              key={item.id}
-              id={item.id}
-              title={item.title}
-              artistName={item.artistName}
-              labelName={item.labelName}
-              releaseDate={item.releaseDate}
-              coverImage={item.coverImage}
-              orderUrl={item.orderUrl}
-              collectabilityScore={item.collectabilityScore}
-              pressRun={item.pressRun}
-              coloredVinyl={item.coloredVinyl}
-              sourceName={item.sourceName}
-            />
-          ))}
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
+                <th className="whitespace-nowrap px-4 py-2.5 font-medium">Score</th>
+                <th className="px-4 py-2.5 font-medium">Artist</th>
+                <th className="px-4 py-2.5 font-medium">Title</th>
+                <th className="hidden px-4 py-2.5 font-medium sm:table-cell">Label</th>
+                <th className="hidden px-4 py-2.5 font-medium md:table-cell">Date</th>
+                <th className="hidden px-4 py-2.5 font-medium lg:table-cell">Details</th>
+                <th className="px-4 py-2.5 font-medium" />
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {items.map((item) => {
+                const formattedDate = item.releaseDate
+                  ? new Date(item.releaseDate).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })
+                  : null;
+
+                return (
+                  <tr key={item.id} className="transition-colors hover:bg-muted/30">
+                    <td className="px-4 py-3">
+                      <ScoreCell score={item.collectabilityScore} />
+                    </td>
+                    <td className="max-w-[160px] truncate px-4 py-3 font-medium">
+                      {item.artistName}
+                    </td>
+                    <td className="max-w-[200px] truncate px-4 py-3">
+                      {item.title}
+                    </td>
+                    <td className="hidden max-w-[120px] truncate px-4 py-3 text-muted-foreground sm:table-cell">
+                      {item.labelName ?? "--"}
+                    </td>
+                    <td className="hidden whitespace-nowrap px-4 py-3 text-muted-foreground md:table-cell">
+                      {formattedDate ?? "--"}
+                    </td>
+                    <td className="hidden px-4 py-3 lg:table-cell">
+                      <div className="flex flex-wrap gap-1">
+                        {item.pressRun && (
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                            {item.pressRun} copies
+                          </span>
+                        )}
+                        {item.coloredVinyl && (
+                          <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] text-primary">
+                            Color
+                          </span>
+                        )}
+                        {item.sourceName && (
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                            {item.sourceName}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          title="Add to wantlist"
+                          onClick={() =>
+                            addMutation.mutate({
+                              discogsId: 0,
+                              title: item.title,
+                              status: "wanted",
+                            })
+                          }
+                          disabled={addMutation.isPending}
+                        >
+                          <Heart className="h-3.5 w-3.5" />
+                        </Button>
+                        {item.orderUrl && (
+                          <a
+                            href={item.orderUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Order">
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </Button>
+                          </a>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
