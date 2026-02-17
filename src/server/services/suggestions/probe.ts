@@ -147,6 +147,8 @@ async function probeSource(
       coloredVinyl: raw.coloredVinyl ?? null,
       numbered: raw.numbered ?? null,
       specialPackaging: raw.specialPackaging ?? null,
+      communityWant: raw.communityWant,
+      communityHave: raw.communityHave,
     });
 
     const rawTaste = tasteScores[i] ?? 0;

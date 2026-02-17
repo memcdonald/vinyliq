@@ -1,6 +1,7 @@
 import { eq, and } from "drizzle-orm";
 import { db } from "@/server/db";
 import { releaseSources, upcomingReleases, dataSources } from "@/server/db/schema";
+import { discogsClient } from "@/server/services/discogs/client";
 import type { ReleaseSource, DataSource } from "@/server/db/schema";
 import type { RawRelease } from "./types";
 import { RssAdapter } from "./rss-adapter";
@@ -62,6 +63,11 @@ export async function fetchSource(
   );
 
   for (const raw of rawReleases) {
+    // Skip junk entries with missing or placeholder artist names
+    if (!raw.artistName?.trim() || raw.artistName.trim().toLowerCase() === "unknown artist") {
+      continue;
+    }
+
     const key = `${raw.artistName.toLowerCase()}::${raw.title.toLowerCase()}`;
     if (existingKeys.has(key)) continue;
 
@@ -150,6 +156,11 @@ async function fetchDataSource(
   let added = 0;
 
   for (const raw of rawReleases) {
+    // Skip junk entries with missing or placeholder artist names
+    if (!raw.artistName?.trim() || raw.artistName.trim().toLowerCase() === "unknown artist") {
+      continue;
+    }
+
     const key = `${raw.artistName.toLowerCase()}::${raw.title.toLowerCase()}`;
     if (existingKeys.has(key)) continue;
 
@@ -282,6 +293,62 @@ export async function fetchAllSources(userId: string): Promise<{ totalAdded: num
     } catch (err) {
       console.error("AI collectability scoring failed:", err);
     }
+  }
+
+  // 4. Discogs community data enrichment for releases stuck at score 1
+  try {
+    const lowScored = await db
+      .select({
+        id: upcomingReleases.id,
+        title: upcomingReleases.title,
+        artistName: upcomingReleases.artistName,
+        pressRun: upcomingReleases.pressRun,
+        coloredVinyl: upcomingReleases.coloredVinyl,
+        numbered: upcomingReleases.numbered,
+        specialPackaging: upcomingReleases.specialPackaging,
+        collectabilityScore: upcomingReleases.collectabilityScore,
+      })
+      .from(upcomingReleases)
+      .where(
+        and(
+          eq(upcomingReleases.userId, userId),
+          eq(upcomingReleases.collectabilityScore, 1),
+        ),
+      )
+      .limit(20);
+
+    for (const release of lowScored) {
+      try {
+        const response = await discogsClient.search({
+          q: `${release.artistName} ${release.title}`,
+          type: "master",
+          per_page: 3,
+        });
+
+        const best = response.results?.[0];
+        if (best?.community) {
+          const updated = computeCollectabilityForRelease(release, {
+            want: best.community.want,
+            have: best.community.have,
+          });
+
+          if (updated.score > 1) {
+            await db
+              .update(upcomingReleases)
+              .set({
+                collectabilityScore: updated.score,
+                collectabilityExplanation: updated.explanation,
+                updatedAt: new Date(),
+              })
+              .where(eq(upcomingReleases.id, release.id));
+          }
+        }
+      } catch {
+        // Individual lookup failure is non-fatal
+      }
+    }
+  } catch (err) {
+    console.error("Discogs community enrichment failed:", err);
   }
 
   return { totalAdded };

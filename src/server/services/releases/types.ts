@@ -12,6 +12,8 @@ export interface RawRelease {
   specialPackaging?: string;
   confidence?: number;
   vinylConfirmed?: boolean;
+  communityWant?: number;
+  communityHave?: number;
 }
 
 export interface SourceAdapter {

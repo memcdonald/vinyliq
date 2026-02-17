@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { eq, and, desc, asc } from "drizzle-orm";
+import { eq, ne, and, desc, asc } from "drizzle-orm";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { db } from "@/server/db";
 import { releaseSources, upcomingReleases } from "@/server/db/schema";
@@ -96,13 +96,16 @@ export const releasesRouter = createTRPCRouter({
       z
         .object({
           status: releaseStatus.optional(),
-          sortBy: z.enum(["date", "collectability", "title"]).optional(),
+          sortBy: z.enum(["date", "collectability", "title", "artist"]).optional(),
           sortOrder: z.enum(["asc", "desc"]).optional(),
         })
         .optional(),
     )
     .query(async ({ ctx, input }) => {
-      const conditions = [eq(upcomingReleases.userId, ctx.userId)];
+      const conditions = [
+        eq(upcomingReleases.userId, ctx.userId),
+        ne(upcomingReleases.artistName, "Unknown Artist"),
+      ];
       if (input?.status) {
         conditions.push(eq(upcomingReleases.status, input.status));
       }
@@ -115,6 +118,9 @@ export const releasesRouter = createTRPCRouter({
           break;
         case "title":
           orderBy = sortOrder(upcomingReleases.title);
+          break;
+        case "artist":
+          orderBy = sortOrder(upcomingReleases.artistName);
           break;
         default:
           orderBy = desc(upcomingReleases.releaseDate);

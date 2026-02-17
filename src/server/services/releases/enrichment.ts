@@ -35,6 +35,8 @@ async function enrichSingle(release: RawRelease): Promise<RawRelease> {
   let vinylConfirmed = release.vinylConfirmed ?? false;
   let releaseDate = release.releaseDate;
   let labelName = release.labelName;
+  let communityWant = release.communityWant;
+  let communityHave = release.communityHave;
 
   // MusicBrainz lookup
   try {
@@ -69,6 +71,12 @@ async function enrichSingle(release: RawRelease): Promise<RawRelease> {
       if (discogsResult.labelName && !labelName) {
         labelName = discogsResult.labelName;
       }
+      if (discogsResult.communityWant !== undefined) {
+        communityWant = discogsResult.communityWant;
+      }
+      if (discogsResult.communityHave !== undefined) {
+        communityHave = discogsResult.communityHave;
+      }
     }
   } catch {
     // Discogs failure is non-fatal
@@ -80,6 +88,8 @@ async function enrichSingle(release: RawRelease): Promise<RawRelease> {
     vinylConfirmed,
     releaseDate,
     labelName,
+    communityWant,
+    communityHave,
   };
 }
 
@@ -120,6 +130,8 @@ async function lookupMusicBrainz(
 interface DiscogsResult {
   hasVinyl: boolean;
   labelName?: string;
+  communityWant?: number;
+  communityHave?: number;
 }
 
 async function lookupDiscogs(
@@ -152,8 +164,10 @@ async function lookupDiscogs(
   ) ?? false;
 
   const labelName = best.label?.[0] ?? undefined;
+  const communityWant = best.community?.want ?? undefined;
+  const communityHave = best.community?.have ?? undefined;
 
-  return { hasVinyl, labelName };
+  return { hasVinyl, labelName, communityWant, communityHave };
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────

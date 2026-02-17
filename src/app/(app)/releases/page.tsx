@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { CalendarClock, RefreshCw, Rss } from "lucide-react";
+import { useState, useMemo } from "react";
+import { CalendarClock, RefreshCw, Rss, Search } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FunkySpinner } from "@/components/ui/funky-spinner";
 import { Card } from "@/components/ui/card";
@@ -13,7 +14,7 @@ import { AddReleaseDialog } from "@/components/add-release-dialog";
 import { ManageSourcesSheet } from "@/components/manage-sources-sheet";
 import { CsvImportDialog } from "@/components/csv-import-dialog";
 
-type SortBy = "date" | "collectability" | "title";
+type SortBy = "date" | "collectability" | "title" | "artist";
 type StatusFilter = "upcoming" | "released" | "archived" | undefined;
 
 function ReleasesSkeleton() {
@@ -36,6 +37,7 @@ function ReleasesSkeleton() {
 export default function ReleasesPage() {
   const [sortBy, setSortBy] = useState<SortBy>("date");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("upcoming");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { data, isLoading } = trpc.releases.getUpcoming.useQuery({
     status: statusFilter,
@@ -66,7 +68,16 @@ export default function ReleasesPage() {
     });
   }
 
-  const items = data?.items ?? [];
+  const items = useMemo(() => {
+    const all = data?.items ?? [];
+    if (!searchQuery.trim()) return all;
+    const q = searchQuery.toLowerCase();
+    return all.filter(
+      (item) =>
+        item.artistName.toLowerCase().includes(q) ||
+        item.title.toLowerCase().includes(q),
+    );
+  }, [data?.items, searchQuery]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
@@ -126,6 +137,7 @@ export default function ReleasesPage() {
             ["date", "Date"],
             ["collectability", "Collectability"],
             ["title", "Title"],
+            ["artist", "Artist"],
           ] as const).map(([value, label]) => (
             <Button
               key={value}
@@ -137,6 +149,15 @@ export default function ReleasesPage() {
               {label}
             </Button>
           ))}
+        </div>
+        <div className="relative ml-auto w-full sm:w-48">
+          <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search releases..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-7 pl-7 text-xs"
+          />
         </div>
       </div>
 

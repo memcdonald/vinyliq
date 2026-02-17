@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   Sparkles,
   ThumbsUp,
@@ -9,18 +9,20 @@ import {
   Radar,
   Loader2,
   Music,
+  Search,
 } from "lucide-react";
 import Image from "next/image";
 import { FunkySpinner } from "@/components/ui/funky-spinner";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type StatusFilter = "new" | "interested" | "dismissed";
-type SortBy = "combined" | "taste" | "collectability" | "date";
+type SortBy = "combined" | "taste" | "collectability" | "date" | "artist";
 
 function ScoreBadge({ score, label }: { score: number | null; label: string }) {
   if (score === null) return null;
@@ -113,6 +115,7 @@ function ProbeProgress() {
 export default function SuggestionsPage() {
   const [filter, setFilter] = useState<StatusFilter>("new");
   const [sortBy, setSortBy] = useState<SortBy>("combined");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { data: suggestions, isLoading } = trpc.suggestions.getAll.useQuery({
     status: filter,
@@ -205,6 +208,7 @@ export default function SuggestionsPage() {
               ["taste", "Taste"],
               ["collectability", "Collectability"],
               ["date", "Newest"],
+              ["artist", "Artist"],
             ] as const
           ).map(([value, label]) => (
             <Button
@@ -217,6 +221,15 @@ export default function SuggestionsPage() {
               {label}
             </Button>
           ))}
+        </div>
+        <div className="relative ml-auto w-full sm:w-48">
+          <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search suggestions..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-7 pl-7 text-xs"
+          />
         </div>
       </div>
 
@@ -256,18 +269,31 @@ export default function SuggestionsPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {[...suggestions].sort((a, b) => {
-            switch (sortBy) {
-              case "taste":
-                return (b.tasteScore ?? 0) - (a.tasteScore ?? 0);
-              case "collectability":
-                return (b.collectabilityScore ?? 0) - (a.collectabilityScore ?? 0);
-              case "date":
-                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-              default:
-                return (b.combinedScore ?? 0) - (a.combinedScore ?? 0);
+          {(() => {
+            let filtered = [...suggestions];
+            if (searchQuery.trim()) {
+              const q = searchQuery.toLowerCase();
+              filtered = filtered.filter(
+                (s) =>
+                  s.artistName.toLowerCase().includes(q) ||
+                  s.title.toLowerCase().includes(q),
+              );
             }
-          }).map((s) => (
+            return filtered.sort((a, b) => {
+              switch (sortBy) {
+                case "taste":
+                  return (b.tasteScore ?? 0) - (a.tasteScore ?? 0);
+                case "collectability":
+                  return (b.collectabilityScore ?? 0) - (a.collectabilityScore ?? 0);
+                case "date":
+                  return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                case "artist":
+                  return a.artistName.localeCompare(b.artistName);
+                default:
+                  return (b.combinedScore ?? 0) - (a.combinedScore ?? 0);
+              }
+            });
+          })().map((s) => (
             <Card key={s.id} className="overflow-hidden">
               <CardContent className="flex gap-4 p-4">
                 {/* Cover image */}
