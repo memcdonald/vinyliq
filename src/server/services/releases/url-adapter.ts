@@ -32,7 +32,7 @@ function extractReleasesFromHtml(html: string, baseUrl: string): RawRelease[] {
       if (data["@type"] === "MusicAlbum") {
         releases.push({
           title: data.name || "",
-          artistName: data.byArtist?.name || data.brand?.name || "Unknown Artist",
+          artistName: data.byArtist?.name || data.brand?.name || "",
           releaseDate: data.datePublished ? new Date(data.datePublished) : undefined,
           coverImage: data.image,
           description: data.description?.slice(0, 500),
@@ -56,14 +56,13 @@ function extractReleasesFromHtml(html: string, baseUrl: string): RawRelease[] {
     const rawTitle = match[1].replace(/<[^>]+>/g, "").trim();
     if (!rawTitle || rawTitle.length < 3) continue;
 
+    // Require "Artist - Title" format; skip entries that can't parse an artist
     const parts = rawTitle.split(" - ");
-    let artistName = "Unknown Artist";
-    let title = rawTitle;
+    if (parts.length < 2) continue;
 
-    if (parts.length >= 2) {
-      artistName = parts[0].trim();
-      title = parts.slice(1).join(" - ").trim();
-    }
+    const artistName = parts[0].trim();
+    const title = parts.slice(1).join(" - ").trim();
+    if (!artistName || !title) continue;
 
     releases.push({
       title,

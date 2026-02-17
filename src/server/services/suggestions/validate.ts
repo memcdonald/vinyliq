@@ -20,19 +20,41 @@ const EXCLUSION_KEYWORDS = [
   "roundup",
   "playlist",
   "podcast",
+  "dead at",
+  "announces",
+  "covers",
+  "returns",
+  "subscribe",
+  "super bowl",
+  "files",
+  "freestyle",
+  "we've got a file",
+  "band to watch",
+  "number ones",
+  "album of the week",
+  "premature evaluation",
+  "most collected",
+  "most valuable",
+  "best-selling",
+  "evolution of",
+  "love letter",
 ];
 
 const EXCLUSION_RE = new RegExp(`\\b(${EXCLUSION_KEYWORDS.join("|")})\\b`, "i");
+const EXCLUSION_RE_PATTERNS = /\bturns \d+\b/i;
 
 /**
  * Layer 1 — Fast heuristic pre-filter (no API cost).
  * Returns true if the release looks like an actual vinyl album.
  */
 export function isLikelyAlbum(release: RawRelease): boolean {
+  // Reject placeholder artist names
+  if (release.artistName?.trim().toLowerCase() === "unknown artist") return false;
+
   const text = [release.title, release.artistName, release.description ?? ""]
     .join(" ")
     .toLowerCase();
-  return !EXCLUSION_RE.test(text);
+  return !EXCLUSION_RE.test(text) && !EXCLUSION_RE_PATTERNS.test(text);
 }
 
 /**
@@ -73,14 +95,18 @@ ${numbered.join("\n")}`;
       ? await callClaudeValidation(prompt, anthropicKey)
       : await callOpenAIValidation(prompt, openaiKey);
 
-    if (!indices) return releases; // API error → keep all
+    if (!indices) {
+      // API error → fall back to strict heuristic instead of keeping everything
+      console.warn("AI validation returned null, applying strict heuristic fallback");
+      return releases.filter(isLikelyAlbum);
+    }
 
     return indices
       .filter((i) => i >= 0 && i < releases.length)
       .map((i) => releases[i]);
   } catch {
-    console.error("AI album validation failed, keeping all candidates");
-    return releases;
+    console.error("AI album validation failed, applying strict heuristic fallback");
+    return releases.filter(isLikelyAlbum);
   }
 }
 

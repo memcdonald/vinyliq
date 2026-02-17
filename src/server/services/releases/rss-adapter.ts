@@ -20,15 +20,15 @@ export class RssAdapter implements SourceAdapter {
     for (const item of feed.items) {
       if (!item.title) continue;
 
-      // Try to split "Artist - Title" format
-      const parts = item.title.split(" - ");
-      let artistName = "Unknown Artist";
-      let title = item.title;
+      const decodedTitle = decodeHtmlEntities(item.title);
 
-      if (parts.length >= 2) {
-        artistName = parts[0].trim();
-        title = parts.slice(1).join(" - ").trim();
-      }
+      // Require "Artist - Title" format; skip blog articles without it
+      const parts = decodedTitle.split(" - ");
+      if (parts.length < 2) continue;
+
+      const artistName = parts[0].trim();
+      const title = parts.slice(1).join(" - ").trim();
+      if (!artistName || !title) continue;
 
       // Extract image from various RSS fields
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -50,12 +50,16 @@ export class RssAdapter implements SourceAdapter {
       const pressRunMatch = desc.match(/limited to (\d+)/);
       const pressRun = pressRunMatch ? parseInt(pressRunMatch[1], 10) : undefined;
 
+      const description = item.contentSnippet
+        ? decodeHtmlEntities(item.contentSnippet).slice(0, 500)
+        : undefined;
+
       releases.push({
         title,
         artistName,
         releaseDate,
         coverImage: typeof coverImage === "string" ? coverImage : undefined,
-        description: item.contentSnippet?.slice(0, 500),
+        description,
         orderUrl: item.link,
         coloredVinyl,
         numbered,
@@ -70,4 +74,19 @@ export class RssAdapter implements SourceAdapter {
 function extractImageFromHtml(html: string): string | null {
   const match = html.match(/<img[^>]+src=["']([^"']+)["']/);
   return match?.[1] ?? null;
+}
+
+const HTML_ENTITY_MAP: Record<string, string> = {
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&#39;": "'",
+  "&apos;": "'",
+};
+
+function decodeHtmlEntities(text: string): string {
+  return text
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+    .replace(/&(?:amp|lt|gt|quot|apos|#39);/g, (match) => HTML_ENTITY_MAP[match] ?? match);
 }

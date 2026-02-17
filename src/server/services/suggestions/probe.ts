@@ -78,8 +78,12 @@ async function probeSource(
   // Filter to actual album releases (heuristic + AI validation)
   rawReleases = await filterToAlbums(rawReleases, keys);
 
-  // Reject releases missing artist or title
-  rawReleases = rawReleases.filter(r => r.artistName?.trim() && r.title?.trim());
+  // Reject releases missing artist or title, or with placeholder "Unknown Artist"
+  rawReleases = rawReleases.filter(
+    r => r.artistName?.trim() &&
+         r.title?.trim() &&
+         r.artistName.trim().toLowerCase() !== "unknown artist",
+  );
 
   if (rawReleases.length === 0) {
     return { sourceName: source.sourceName, discovered: 0, explained: 0 };
