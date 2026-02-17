@@ -100,14 +100,18 @@ export function computeCollectability(input: CollectabilityInput): Collectabilit
   }
 
   // Normalize from 0-100 to 1-10
+  // When no factors are present, use a baseline of 3 ("unknown" rather than "not collectable")
+  // so that unknown releases aren't penalized in combined score calculations.
   const clamped = Math.min(100, score);
-  const normalized = Math.max(1, Math.min(10, Math.round(clamped / 10)));
+  const normalized = factors.length === 0
+    ? 3
+    : Math.max(1, Math.min(10, Math.round(clamped / 10)));
 
   return {
     score: normalized,
     explanation: factors.length > 0
       ? factors.join(". ") + "."
-      : "No collectability indicators found.",
+      : "No collectability data available yet.",
   };
 }
 

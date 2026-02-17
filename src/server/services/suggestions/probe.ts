@@ -177,9 +177,10 @@ async function probeSource(
     existingKeys.add(key);
   }
 
-  // Quality threshold: filter out low-quality results
+  // Quality threshold: only filter out truly bottom-tier results (combined=1 means both
+  // collectability and taste are very low). Scores improve over time via Discogs/AI enrichment.
   const qualitySuggestions = newSuggestions.filter(
-    (s) => s.combinedScore >= 4 || s.tasteScore >= 6,
+    (s) => s.combinedScore >= 2 || s.tasteScore >= 3,
   );
 
   // Batch insert
