@@ -8,7 +8,9 @@ import {
 } from "@/server/db/schema";
 import { RssAdapter } from "@/server/services/releases/rss-adapter";
 import { UrlAdapter } from "@/server/services/releases/url-adapter";
+import { HubAdapter } from "@/server/services/releases/hub-adapter";
 import { computeCollectability } from "@/server/services/releases/collectability";
+import { enrichReleases } from "@/server/services/releases/enrichment";
 import { batchScoreCollectability, type TasteContext } from "@/server/services/releases/ai-collectability";
 import { getUserApiKeys, type ResolvedKeys } from "@/server/services/ai/keys";
 import { getTasteProfile, topN } from "@/server/recommendation/taste-profile";
@@ -18,6 +20,7 @@ import { filterToAlbums } from "./validate";
 
 const rssAdapter = new RssAdapter();
 const urlAdapter = new UrlAdapter();
+const hubAdapter = new HubAdapter();
 
 export interface ProbeProgress {
   total: number;
@@ -56,12 +59,14 @@ async function probeSource(
   }
 
   // Pick adapter based on access method or URL pattern
+  const isHub = source.accessMethod?.toLowerCase().includes("hub");
   const isRss =
-    source.accessMethod?.toLowerCase().includes("rss") ||
-    source.url.includes("/feed") ||
-    source.url.endsWith(".xml");
+    !isHub &&
+    (source.accessMethod?.toLowerCase().includes("rss") ||
+      source.url.includes("/feed") ||
+      source.url.endsWith(".xml"));
 
-  const adapter = isRss ? rssAdapter : urlAdapter;
+  const adapter = isHub ? hubAdapter : isRss ? rssAdapter : urlAdapter;
 
   let rawReleases;
   try {
@@ -87,6 +92,14 @@ async function probeSource(
 
   if (rawReleases.length === 0) {
     return { sourceName: source.sourceName, discovered: 0, explained: 0 };
+  }
+
+  // Enrichment: validate via MusicBrainz + Discogs (best-effort)
+  try {
+    rawReleases = await enrichReleases(rawReleases);
+  } catch (err) {
+    console.error(`[Probe] Enrichment failed for ${source.sourceName}:`, err);
+    // Non-fatal — continue with unenriched releases
   }
 
   // Get existing suggestions for dedup

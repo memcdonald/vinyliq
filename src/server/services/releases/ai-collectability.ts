@@ -97,9 +97,13 @@ export async function scoreCollectabilityWithAI(
 
   try {
     if (anthropicKey) {
-      return await callClaude(prompt, anthropicKey);
+      const result = await callClaude(prompt, anthropicKey);
+      if (result) return result;
     }
-    return await callOpenAI(prompt, openaiKey);
+    if (openaiKey) {
+      return await callOpenAI(prompt, openaiKey);
+    }
+    return null;
   } catch (err) {
     console.error("[AICollectability] Scoring failed:", err);
     return null;
@@ -155,9 +159,14 @@ Respond with ONLY a valid JSON array of objects, one per release in order:
 [{"score": <1-10>, "explanation": "<1-2 sentences>"}, ...]`;
 
   try {
-    const text = anthropicKey
-      ? await callClaudeRaw(batchPrompt, anthropicKey)
-      : await callOpenAIRaw(batchPrompt, openaiKey);
+    let text: string | null = null;
+
+    if (anthropicKey) {
+      text = await callClaudeRaw(batchPrompt, anthropicKey);
+    }
+    if (!text && openaiKey) {
+      text = await callOpenAIRaw(batchPrompt, openaiKey);
+    }
 
     if (!text) return items.map(() => null);
 
@@ -217,14 +226,15 @@ async function callClaudeRaw(
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-5-20250929",
       max_tokens: 1024,
       messages: [{ role: "user", content: prompt }],
     }),
   });
 
   if (!response.ok) {
-    console.error(`[AICollectability] Claude error: ${response.status}`);
+    const body = await response.text().catch(() => "");
+    console.error(`[AICollectability] Claude error: ${response.status} — ${body}`);
     return null;
   }
 

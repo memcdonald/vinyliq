@@ -10,6 +10,8 @@ export interface RawRelease {
   coloredVinyl?: boolean;
   numbered?: boolean;
   specialPackaging?: string;
+  confidence?: number;
+  vinylConfirmed?: boolean;
 }
 
 export interface SourceAdapter {

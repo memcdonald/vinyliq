@@ -5,12 +5,14 @@ import type { ReleaseSource, DataSource } from "@/server/db/schema";
 import type { RawRelease } from "./types";
 import { RssAdapter } from "./rss-adapter";
 import { UrlAdapter } from "./url-adapter";
+import { HubAdapter } from "./hub-adapter";
 import { computeCollectabilityForRelease } from "./collectability";
 import { batchScoreCollectability } from "./ai-collectability";
 import { getUserApiKeys } from "@/server/services/ai/keys";
 
 const rssAdapter = new RssAdapter();
 const urlAdapter = new UrlAdapter();
+const hubAdapter = new HubAdapter();
 
 function getAdapter(type: string) {
   switch (type) {
@@ -18,6 +20,8 @@ function getAdapter(type: string) {
       return rssAdapter;
     case "url":
       return urlAdapter;
+    case "hub":
+      return hubAdapter;
     default:
       return null;
   }
@@ -112,12 +116,14 @@ async function fetchDataSource(
     return { added: 0, total: 0 };
   }
 
+  const isHub = source.accessMethod?.toLowerCase().includes("hub");
   const isRss =
-    source.accessMethod?.toLowerCase().includes("rss") ||
-    source.url.includes("/feed") ||
-    source.url.endsWith(".xml");
+    !isHub &&
+    (source.accessMethod?.toLowerCase().includes("rss") ||
+      source.url.includes("/feed") ||
+      source.url.endsWith(".xml"));
 
-  const adapter = isRss ? rssAdapter : urlAdapter;
+  const adapter = isHub ? hubAdapter : isRss ? rssAdapter : urlAdapter;
 
   let rawReleases: RawRelease[];
   try {

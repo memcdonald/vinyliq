@@ -89,7 +89,8 @@ async function generateExplanations(
 
   // Try Claude first, fallback to OpenAI
   if (anthropicKey) {
-    return callClaude(prompt, suggestions.length, anthropicKey);
+    const result = await callClaude(prompt, suggestions.length, anthropicKey);
+    if (result.some((r) => r !== null)) return result;
   }
   if (openaiKey) {
     return callOpenAI(prompt, suggestions.length, openaiKey);
@@ -144,14 +145,15 @@ async function callClaude(
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-5-20250929",
       max_tokens: 1024,
       messages: [{ role: "user", content: prompt }],
     }),
   });
 
   if (!response.ok) {
-    console.error(`Claude API error: ${response.status}`);
+    const body = await response.text().catch(() => "");
+    console.error(`Claude API error: ${response.status} — ${body}`);
     return Array(count).fill(null);
   }
 

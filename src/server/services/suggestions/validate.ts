@@ -91,12 +91,18 @@ Items:
 ${numbered.join("\n")}`;
 
   try {
-    const indices = anthropicKey
-      ? await callClaudeValidation(prompt, anthropicKey)
-      : await callOpenAIValidation(prompt, openaiKey);
+    let indices: number[] | null = null;
+
+    if (anthropicKey) {
+      indices = await callClaudeValidation(prompt, anthropicKey);
+    }
+
+    // Fall back to OpenAI if Claude failed or wasn't configured
+    if (!indices && openaiKey) {
+      indices = await callOpenAIValidation(prompt, openaiKey);
+    }
 
     if (!indices) {
-      // API error → fall back to strict heuristic instead of keeping everything
       console.warn("AI validation returned null, applying strict heuristic fallback");
       return releases.filter(isLikelyAlbum);
     }
@@ -139,14 +145,15 @@ async function callClaudeValidation(
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-5-20250929",
       max_tokens: 512,
       messages: [{ role: "user", content: prompt }],
     }),
   });
 
   if (!response.ok) {
-    console.error(`Claude validation API error: ${response.status}`);
+    const body = await response.text().catch(() => "");
+    console.error(`Claude validation API error: ${response.status} — ${body}`);
     return null;
   }
 
