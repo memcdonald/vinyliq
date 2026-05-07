@@ -152,6 +152,8 @@ export NOTION_TOKEN=...
 |---|---|---|
 | `discogs` | [cswkim/discogs-mcp-server](https://github.com/cswkim/discogs-mcp-server) | Wraps the Discogs API |
 | `playwright` | [microsoft/playwright-mcp](https://github.com/microsoft/playwright-mcp) | Browser automation for end-to-end UI testing |
+| `next-devtools` | [vercel/next-devtools-mcp](https://github.com/vercel/next-devtools-mcp) | Official Vercel/Next.js MCP — runtime diagnostics, route inspection, dev server logs, docs search. Requires `npm run dev` running |
+| `browserbase` | [browserbase/mcp-server-browserbase](https://github.com/browserbase/mcp-server-browserbase) | Cloud browser automation via Browserbase + Stagehand. Hosted SHTTP — Browserbase covers Gemini LLM costs, no API key needed for basic use |
 | `agent-scraper` | [aparajithn/agent-scraper-mcp](https://github.com/aparajithn/agent-scraper-mcp) | Generic web scraping + Google search (hosted, 50 req/IP/day free) |
 | `neon` | [neondatabase/mcp-server-neon](https://github.com/neondatabase/mcp-server-neon) | Inspect/query the live Neon Postgres |
 | `snowflake` | [Snowflake-Labs/mcp](https://github.com/Snowflake-Labs/mcp) | Cortex Agents, SQL, semantic views. Config in `snowflake-tools-config.yaml` (read-only by default) |
@@ -169,6 +171,7 @@ These aren't committed to `.mcp.json` because they need a per-user local path, a
 - **[bitbonsai/mcp-obsidian](https://github.com/bitbonsai/mcp-obsidian)** — Obsidian vault read/write. Run `claude mcp add obsidian --scope user npx @bitbonsai/mcpvault /path/to/your/vault`.
 - **[getsentry/sentry-mcp](https://github.com/getsentry/sentry-mcp)** — Production error tracking. Easiest path: `claude plugin marketplace add getsentry/sentry-mcp && claude plugin install sentry-mcp@sentry-mcp`. The stdio form requires an additional LLM API key.
 - **[aparajithn/agent-deploy-dashboard-mcp](https://github.com/aparajithn/agent-deploy-dashboard-mcp)** — Vercel/Render/Railway/Fly deploy dashboard. The hosted URL is shared and won't carry your Vercel token, so fork the repo and self-host with `VERCEL_TOKEN` set as an env var on your fork.
+- **[opentabs-dev/opentabs](https://github.com/opentabs-dev/opentabs)** — Gives Claude access to your authenticated browser session (Discogs, Spotify, etc.) via a Chrome extension. 100+ plugins. Setup: `npm install -g @opentabs-dev/cli && opentabs start`, then load unpacked extension from `~/.opentabs/extension`.
 
 ## License
 

@@ -11,6 +11,14 @@
       "command": "npx",
       "args": ["-y", "@playwright/mcp@latest"]
     },
+    "next-devtools": {
+      "command": "npx",
+      "args": ["-y", "next-devtools-mcp@latest"]
+    },
+    "browserbase": {
+      "type": "http",
+      "url": "https://mcp.browserbase.com/mcp"
+    },
     "agent-scraper": {
       "type": "http",
       "url": "https://agent-scraper-mcp.onrender.com/mcp"
