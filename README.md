@@ -120,6 +120,73 @@ src/
 - **MusicBrainz** - Rich metadata enrichment (community tags, ratings, artist relationships). Rate limited to 1 req/sec.
 - **Spotify** - Album matching, popularity scores, and library import. Uses client credentials + user OAuth tokens.
 
+## MCP Servers (for Claude Code development)
+
+`.mcp.json` configures MCP servers that give Claude Code live access to the same APIs and infrastructure the app uses, which is helpful when debugging rate limits, pressing variants, query plans, or enrichment data.
+
+### Required env vars
+
+Set these in your shell before starting Claude Code (only the ones for servers you actually want):
+
+```
+# Discogs MCP — https://www.discogs.com/settings/developers
+export DISCOGS_PERSONAL_ACCESS_TOKEN=...
+
+# Neon MCP — https://console.neon.tech/app/settings/api-keys
+export NEON_API_KEY=...
+
+# Snowflake MCP — credentials for your Snowflake account
+export SNOWFLAKE_ACCOUNT=...
+export SNOWFLAKE_USER=...
+export SNOWFLAKE_PASSWORD=...
+export SNOWFLAKE_ROLE=...
+export SNOWFLAKE_WAREHOUSE=...
+
+# Notion MCP — https://www.notion.so/profile/integrations
+export NOTION_TOKEN=...
+
+# Kie.ai MCP — https://kie.ai/api-key
+export KIE_AI_API_KEY=...
+```
+
+### Servers in `.mcp.json`
+
+| Server | Repo | Purpose |
+|---|---|---|
+| `discogs` | [cswkim/discogs-mcp-server](https://github.com/cswkim/discogs-mcp-server) | Wraps the Discogs API |
+| `playwright` | [microsoft/playwright-mcp](https://github.com/microsoft/playwright-mcp) | Browser automation for end-to-end UI testing |
+| `next-devtools` | [vercel/next-devtools-mcp](https://github.com/vercel/next-devtools-mcp) | Official Vercel/Next.js MCP — runtime diagnostics, route inspection, dev server logs, docs search. Requires `npm run dev` running |
+| `browserbase` | [browserbase/mcp-server-browserbase](https://github.com/browserbase/mcp-server-browserbase) | Cloud browser automation via Browserbase + Stagehand. Hosted SHTTP — Browserbase covers Gemini LLM costs, no API key needed for basic use |
+| `agent-scraper` | [aparajithn/agent-scraper-mcp](https://github.com/aparajithn/agent-scraper-mcp) | Generic web scraping + Google search (hosted, 50 req/IP/day free) |
+| `neon` | [neondatabase/mcp-server-neon](https://github.com/neondatabase/mcp-server-neon) | Inspect/query the live Neon Postgres |
+| `snowflake` | [Snowflake-Labs/mcp](https://github.com/Snowflake-Labs/mcp) | Cortex Agents, SQL, semantic views. Config in `snowflake-tools-config.yaml` (read-only by default) |
+| `notion` | [n24q02m/better-notion-mcp](https://github.com/n24q02m/better-notion-mcp) | Markdown-first Notion access for collection notes |
+| `kie-ai` | [felores/kie-ai-mcp-server](https://github.com/felores/kie-ai-mcp-server) | AI media generation (24 tools: Nano Banana images, Veo3 video, Suno music). Useful for album art mockups and promotional assets |
+
+### Optional servers (manual personal setup)
+
+These aren't committed to `.mcp.json` because they need a per-user local path, a forked self-hosted instance, or an LLM API key. Add them to your personal `~/.claude/settings.local.json`.
+
+- **Spotify** — `gupta-kush/spotify-mcp@0.1.0` (the obvious pick) is currently broken: it imports `stdio_server` from `mcp.server`, which moved to `mcp.server.stdio` in newer Python MCP SDKs, and no fix has been published. Working alternatives, all of which require `git clone` + build:
+  - [marcelmarais/spotify-mcp-server](https://github.com/marcelmarais/spotify-mcp-server) — TypeScript, lightweight playback/playlist control. Build with `npm install && npm run build`, then point a personal MCP entry at the built file.
+  - [imprvhub/mcp-claude-spotify](https://github.com/imprvhub/mcp-claude-spotify) — TypeScript, broader feature set. Smithery install: `npx -y @smithery/cli install @imprvhub/mcp-claude-spotify --client claude`.
+  - [khglynn/spotify-bulk-actions-mcp](https://github.com/khglynn/spotify-bulk-actions-mcp) — Python, bulk operations. Local checkout + venv + `python setup_auth.py`.
+- **[YangLiangwei/PersonalizationMCP](https://github.com/YangLiangwei/PersonalizationMCP)** — Aggregates Spotify + Reddit + YouTube + others into one server (90+ tools). Direct fit for the recommendations engine. Requires `git clone` + `uv sync` + `personalhub onboarding` + an absolute path to `server.py`.
+- **[bitbonsai/mcp-obsidian](https://github.com/bitbonsai/mcp-obsidian)** — Obsidian vault read/write. Run `claude mcp add obsidian --scope user npx @bitbonsai/mcpvault /path/to/your/vault`.
+- **[getsentry/sentry-mcp](https://github.com/getsentry/sentry-mcp)** — Production error tracking. Easiest path: `claude plugin marketplace add getsentry/sentry-mcp && claude plugin install sentry-mcp@sentry-mcp`. The stdio form requires an additional LLM API key.
+- **[aparajithn/agent-deploy-dashboard-mcp](https://github.com/aparajithn/agent-deploy-dashboard-mcp)** — Vercel/Render/Railway/Fly deploy dashboard. The hosted URL is shared and won't carry your Vercel token, so fork the repo and self-host with `VERCEL_TOKEN` set as an env var on your fork.
+- **[opentabs-dev/opentabs](https://github.com/opentabs-dev/opentabs)** — Gives Claude access to your authenticated browser session (Discogs, Spotify, etc.) via a Chrome extension. 100+ plugins. Setup: `npm install -g @opentabs-dev/cli && opentabs start`, then load unpacked extension from `~/.opentabs/extension`.
+
+## Agent Skills (project-scoped)
+
+Installed via [`npx skills`](https://skills.sh) into `.agents/skills/`. Universal across Claude Code, Cursor, Codex, and other agents. List with `npx skills ls`.
+
+| Skill | Purpose |
+|---|---|
+| `hyperframes` (+ 9 sub-skills) | [heygen-com/hyperframes](https://github.com/heygen-com/hyperframes) — write HTML, render video. Sub-skills cover GSAP, Anime.js, Lottie, Three.js, Tailwind, WAAPI, and CSS-animation runtimes. Useful for promo video generation. |
+| `last30days` | [mvanhorn/last30days-skill](https://github.com/mvanhorn/last30days-skill) — researches a topic across Reddit, X, YouTube, HN, Polymarket, web search; synthesizes a grounded summary. Useful for tracking vinyl trends. |
+| `stop-slop` | [drm-collab/stop-slop](https://github.com/drm-collab/stop-slop) — removes AI writing patterns from prose. Scores on 5 dimensions and rewrites to sound human. |
+
 ## License
 
 MIT

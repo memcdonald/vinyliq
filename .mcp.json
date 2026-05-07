@@ -1,0 +1,65 @@
+{
+  "mcpServers": {
+    "discogs": {
+      "command": "npx",
+      "args": ["-y", "discogs-mcp-server"],
+      "env": {
+        "DISCOGS_PERSONAL_ACCESS_TOKEN": "${DISCOGS_PERSONAL_ACCESS_TOKEN}"
+      }
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"]
+    },
+    "next-devtools": {
+      "command": "npx",
+      "args": ["-y", "next-devtools-mcp@latest"]
+    },
+    "browserbase": {
+      "type": "http",
+      "url": "https://mcp.browserbase.com/mcp"
+    },
+    "kie-ai": {
+      "command": "npx",
+      "args": ["-y", "@felores/kie-ai-mcp-server"],
+      "env": {
+        "KIE_AI_API_KEY": "${KIE_AI_API_KEY}"
+      }
+    },
+    "agent-scraper": {
+      "type": "http",
+      "url": "https://agent-scraper-mcp.onrender.com/mcp"
+    },
+    "neon": {
+      "type": "http",
+      "url": "https://mcp.neon.tech/mcp",
+      "headers": {
+        "Authorization": "Bearer ${NEON_API_KEY}"
+      }
+    },
+    "snowflake": {
+      "command": "uvx",
+      "args": [
+        "snowflake-labs-mcp",
+        "--service-config-file",
+        "./snowflake-tools-config.yaml",
+        "--connection-name",
+        "default"
+      ],
+      "env": {
+        "SNOWFLAKE_ACCOUNT": "${SNOWFLAKE_ACCOUNT}",
+        "SNOWFLAKE_USER": "${SNOWFLAKE_USER}",
+        "SNOWFLAKE_PASSWORD": "${SNOWFLAKE_PASSWORD}",
+        "SNOWFLAKE_ROLE": "${SNOWFLAKE_ROLE}",
+        "SNOWFLAKE_WAREHOUSE": "${SNOWFLAKE_WAREHOUSE}"
+      }
+    },
+    "notion": {
+      "command": "npx",
+      "args": ["-y", "@n24q02m/better-notion-mcp"],
+      "env": {
+        "NOTION_TOKEN": "${NOTION_TOKEN}"
+      }
+    }
+  }
+}
