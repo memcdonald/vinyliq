@@ -120,6 +120,24 @@ src/
 - **MusicBrainz** - Rich metadata enrichment (community tags, ratings, artist relationships). Rate limited to 1 req/sec.
 - **Spotify** - Album matching, popularity scores, and library import. Uses client credentials + user OAuth tokens.
 
+## MCP Servers (for Claude Code development)
+
+`.mcp.json` configures MCP servers that give Claude Code live access to the same APIs the app uses, which is helpful when debugging Discogs rate limits, pressing variants, or Spotify enrichment data.
+
+Set these env vars in your shell before starting Claude Code:
+
+```
+export DISCOGS_PERSONAL_ACCESS_TOKEN=<token from https://www.discogs.com/settings/developers>
+export SPOTIFY_CLIENT_ID=<client id from https://developer.spotify.com/dashboard>
+```
+
+Servers configured:
+
+- **discogs** — [cswkim/discogs-mcp-server](https://github.com/cswkim/discogs-mcp-server) via `npx`. Wraps the Discogs API.
+- **spotify** — [gupta-kush/spotify-mcp](https://github.com/gupta-kush/spotify-mcp) via `uvx` (requires [uv](https://docs.astral.sh/uv/)). Uses PKCE OAuth; opens a browser on first tool use.
+
+**Optional:** [khglynn/spotify-bulk-actions-mcp](https://github.com/khglynn/spotify-bulk-actions-mcp) is useful as a reference for the Spotify bulk-import flow but requires a local checkout + venv + `python setup_auth.py`, so it isn't committed to `.mcp.json`. Install per its README and add to your personal `~/.claude/settings.local.json`.
+
 ## License
 
 MIT
