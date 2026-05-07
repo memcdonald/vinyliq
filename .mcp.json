@@ -7,13 +7,6 @@
         "DISCOGS_PERSONAL_ACCESS_TOKEN": "${DISCOGS_PERSONAL_ACCESS_TOKEN}"
       }
     },
-    "spotify": {
-      "command": "uvx",
-      "args": ["spotify-mcp"],
-      "env": {
-        "SPOTIFY_CLIENT_ID": "${SPOTIFY_CLIENT_ID}"
-      }
-    },
     "playwright": {
       "command": "npx",
       "args": ["-y", "@playwright/mcp@latest"]

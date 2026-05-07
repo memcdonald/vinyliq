@@ -132,9 +132,6 @@ Set these in your shell before starting Claude Code (only the ones for servers y
 # Discogs MCP — https://www.discogs.com/settings/developers
 export DISCOGS_PERSONAL_ACCESS_TOKEN=...
 
-# Spotify MCP — https://developer.spotify.com/dashboard
-export SPOTIFY_CLIENT_ID=...
-
 # Neon MCP — https://console.neon.tech/app/settings/api-keys
 export NEON_API_KEY=...
 
@@ -154,7 +151,6 @@ export NOTION_TOKEN=...
 | Server | Repo | Purpose |
 |---|---|---|
 | `discogs` | [cswkim/discogs-mcp-server](https://github.com/cswkim/discogs-mcp-server) | Wraps the Discogs API |
-| `spotify` | [gupta-kush/spotify-mcp](https://github.com/gupta-kush/spotify-mcp) | 93-tool Spotify server with PKCE OAuth (requires [uv](https://docs.astral.sh/uv/)) |
 | `playwright` | [microsoft/playwright-mcp](https://github.com/microsoft/playwright-mcp) | Browser automation for end-to-end UI testing |
 | `agent-scraper` | [aparajithn/agent-scraper-mcp](https://github.com/aparajithn/agent-scraper-mcp) | Generic web scraping + Google search (hosted, 50 req/IP/day free) |
 | `neon` | [neondatabase/mcp-server-neon](https://github.com/neondatabase/mcp-server-neon) | Inspect/query the live Neon Postgres |
@@ -165,7 +161,10 @@ export NOTION_TOKEN=...
 
 These aren't committed to `.mcp.json` because they need a per-user local path, a forked self-hosted instance, or an LLM API key. Add them to your personal `~/.claude/settings.local.json`.
 
-- **[khglynn/spotify-bulk-actions-mcp](https://github.com/khglynn/spotify-bulk-actions-mcp)** — Bulk Spotify ops. Useful reference for the Spotify import flow. Requires local checkout + venv + `python setup_auth.py`.
+- **Spotify** — `gupta-kush/spotify-mcp@0.1.0` (the obvious pick) is currently broken: it imports `stdio_server` from `mcp.server`, which moved to `mcp.server.stdio` in newer Python MCP SDKs, and no fix has been published. Working alternatives, all of which require `git clone` + build:
+  - [marcelmarais/spotify-mcp-server](https://github.com/marcelmarais/spotify-mcp-server) — TypeScript, lightweight playback/playlist control. Build with `npm install && npm run build`, then point a personal MCP entry at the built file.
+  - [imprvhub/mcp-claude-spotify](https://github.com/imprvhub/mcp-claude-spotify) — TypeScript, broader feature set. Smithery install: `npx -y @smithery/cli install @imprvhub/mcp-claude-spotify --client claude`.
+  - [khglynn/spotify-bulk-actions-mcp](https://github.com/khglynn/spotify-bulk-actions-mcp) — Python, bulk operations. Local checkout + venv + `python setup_auth.py`.
 - **[YangLiangwei/PersonalizationMCP](https://github.com/YangLiangwei/PersonalizationMCP)** — Aggregates Spotify + Reddit + YouTube + others into one server (90+ tools). Direct fit for the recommendations engine. Requires `git clone` + `uv sync` + `personalhub onboarding` + an absolute path to `server.py`.
 - **[bitbonsai/mcp-obsidian](https://github.com/bitbonsai/mcp-obsidian)** — Obsidian vault read/write. Run `claude mcp add obsidian --scope user npx @bitbonsai/mcpvault /path/to/your/vault`.
 - **[getsentry/sentry-mcp](https://github.com/getsentry/sentry-mcp)** — Production error tracking. Easiest path: `claude plugin marketplace add getsentry/sentry-mcp && claude plugin install sentry-mcp@sentry-mcp`. The stdio form requires an additional LLM API key.
