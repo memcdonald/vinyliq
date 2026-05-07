@@ -19,6 +19,13 @@
       "type": "http",
       "url": "https://mcp.browserbase.com/mcp"
     },
+    "kie-ai": {
+      "command": "npx",
+      "args": ["-y", "@felores/kie-ai-mcp-server"],
+      "env": {
+        "KIE_AI_API_KEY": "${KIE_AI_API_KEY}"
+      }
+    },
     "agent-scraper": {
       "type": "http",
       "url": "https://agent-scraper-mcp.onrender.com/mcp"

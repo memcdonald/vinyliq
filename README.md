@@ -144,6 +144,9 @@ export SNOWFLAKE_WAREHOUSE=...
 
 # Notion MCP — https://www.notion.so/profile/integrations
 export NOTION_TOKEN=...
+
+# Kie.ai MCP — https://kie.ai/api-key
+export KIE_AI_API_KEY=...
 ```
 
 ### Servers in `.mcp.json`
@@ -158,6 +161,7 @@ export NOTION_TOKEN=...
 | `neon` | [neondatabase/mcp-server-neon](https://github.com/neondatabase/mcp-server-neon) | Inspect/query the live Neon Postgres |
 | `snowflake` | [Snowflake-Labs/mcp](https://github.com/Snowflake-Labs/mcp) | Cortex Agents, SQL, semantic views. Config in `snowflake-tools-config.yaml` (read-only by default) |
 | `notion` | [n24q02m/better-notion-mcp](https://github.com/n24q02m/better-notion-mcp) | Markdown-first Notion access for collection notes |
+| `kie-ai` | [felores/kie-ai-mcp-server](https://github.com/felores/kie-ai-mcp-server) | AI media generation (24 tools: Nano Banana images, Veo3 video, Suno music). Useful for album art mockups and promotional assets |
 
 ### Optional servers (manual personal setup)
 
@@ -172,6 +176,16 @@ These aren't committed to `.mcp.json` because they need a per-user local path, a
 - **[getsentry/sentry-mcp](https://github.com/getsentry/sentry-mcp)** — Production error tracking. Easiest path: `claude plugin marketplace add getsentry/sentry-mcp && claude plugin install sentry-mcp@sentry-mcp`. The stdio form requires an additional LLM API key.
 - **[aparajithn/agent-deploy-dashboard-mcp](https://github.com/aparajithn/agent-deploy-dashboard-mcp)** — Vercel/Render/Railway/Fly deploy dashboard. The hosted URL is shared and won't carry your Vercel token, so fork the repo and self-host with `VERCEL_TOKEN` set as an env var on your fork.
 - **[opentabs-dev/opentabs](https://github.com/opentabs-dev/opentabs)** — Gives Claude access to your authenticated browser session (Discogs, Spotify, etc.) via a Chrome extension. 100+ plugins. Setup: `npm install -g @opentabs-dev/cli && opentabs start`, then load unpacked extension from `~/.opentabs/extension`.
+
+## Agent Skills (project-scoped)
+
+Installed via [`npx skills`](https://skills.sh) into `.agents/skills/`. Universal across Claude Code, Cursor, Codex, and other agents. List with `npx skills ls`.
+
+| Skill | Purpose |
+|---|---|
+| `hyperframes` (+ 9 sub-skills) | [heygen-com/hyperframes](https://github.com/heygen-com/hyperframes) — write HTML, render video. Sub-skills cover GSAP, Anime.js, Lottie, Three.js, Tailwind, WAAPI, and CSS-animation runtimes. Useful for promo video generation. |
+| `last30days` | [mvanhorn/last30days-skill](https://github.com/mvanhorn/last30days-skill) — researches a topic across Reddit, X, YouTube, HN, Polymarket, web search; synthesizes a grounded summary. Useful for tracking vinyl trends. |
+| `stop-slop` | [drm-collab/stop-slop](https://github.com/drm-collab/stop-slop) — removes AI writing patterns from prose. Scores on 5 dimensions and rewrites to sound human. |
 
 ## License
 
