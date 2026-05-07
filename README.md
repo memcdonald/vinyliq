@@ -122,21 +122,54 @@ src/
 
 ## MCP Servers (for Claude Code development)
 
-`.mcp.json` configures MCP servers that give Claude Code live access to the same APIs the app uses, which is helpful when debugging Discogs rate limits, pressing variants, or Spotify enrichment data.
+`.mcp.json` configures MCP servers that give Claude Code live access to the same APIs and infrastructure the app uses, which is helpful when debugging rate limits, pressing variants, query plans, or enrichment data.
 
-Set these env vars in your shell before starting Claude Code:
+### Required env vars
+
+Set these in your shell before starting Claude Code (only the ones for servers you actually want):
 
 ```
-export DISCOGS_PERSONAL_ACCESS_TOKEN=<token from https://www.discogs.com/settings/developers>
-export SPOTIFY_CLIENT_ID=<client id from https://developer.spotify.com/dashboard>
+# Discogs MCP — https://www.discogs.com/settings/developers
+export DISCOGS_PERSONAL_ACCESS_TOKEN=...
+
+# Spotify MCP — https://developer.spotify.com/dashboard
+export SPOTIFY_CLIENT_ID=...
+
+# Neon MCP — https://console.neon.tech/app/settings/api-keys
+export NEON_API_KEY=...
+
+# Snowflake MCP — credentials for your Snowflake account
+export SNOWFLAKE_ACCOUNT=...
+export SNOWFLAKE_USER=...
+export SNOWFLAKE_PASSWORD=...
+export SNOWFLAKE_ROLE=...
+export SNOWFLAKE_WAREHOUSE=...
+
+# Notion MCP — https://www.notion.so/profile/integrations
+export NOTION_TOKEN=...
 ```
 
-Servers configured:
+### Servers in `.mcp.json`
 
-- **discogs** — [cswkim/discogs-mcp-server](https://github.com/cswkim/discogs-mcp-server) via `npx`. Wraps the Discogs API.
-- **spotify** — [gupta-kush/spotify-mcp](https://github.com/gupta-kush/spotify-mcp) via `uvx` (requires [uv](https://docs.astral.sh/uv/)). Uses PKCE OAuth; opens a browser on first tool use.
+| Server | Repo | Purpose |
+|---|---|---|
+| `discogs` | [cswkim/discogs-mcp-server](https://github.com/cswkim/discogs-mcp-server) | Wraps the Discogs API |
+| `spotify` | [gupta-kush/spotify-mcp](https://github.com/gupta-kush/spotify-mcp) | 93-tool Spotify server with PKCE OAuth (requires [uv](https://docs.astral.sh/uv/)) |
+| `playwright` | [microsoft/playwright-mcp](https://github.com/microsoft/playwright-mcp) | Browser automation for end-to-end UI testing |
+| `agent-scraper` | [aparajithn/agent-scraper-mcp](https://github.com/aparajithn/agent-scraper-mcp) | Generic web scraping + Google search (hosted, 50 req/IP/day free) |
+| `neon` | [neondatabase/mcp-server-neon](https://github.com/neondatabase/mcp-server-neon) | Inspect/query the live Neon Postgres |
+| `snowflake` | [Snowflake-Labs/mcp](https://github.com/Snowflake-Labs/mcp) | Cortex Agents, SQL, semantic views. Config in `snowflake-tools-config.yaml` (read-only by default) |
+| `notion` | [n24q02m/better-notion-mcp](https://github.com/n24q02m/better-notion-mcp) | Markdown-first Notion access for collection notes |
 
-**Optional:** [khglynn/spotify-bulk-actions-mcp](https://github.com/khglynn/spotify-bulk-actions-mcp) is useful as a reference for the Spotify bulk-import flow but requires a local checkout + venv + `python setup_auth.py`, so it isn't committed to `.mcp.json`. Install per its README and add to your personal `~/.claude/settings.local.json`.
+### Optional servers (manual personal setup)
+
+These aren't committed to `.mcp.json` because they need a per-user local path, a forked self-hosted instance, or an LLM API key. Add them to your personal `~/.claude/settings.local.json`.
+
+- **[khglynn/spotify-bulk-actions-mcp](https://github.com/khglynn/spotify-bulk-actions-mcp)** — Bulk Spotify ops. Useful reference for the Spotify import flow. Requires local checkout + venv + `python setup_auth.py`.
+- **[YangLiangwei/PersonalizationMCP](https://github.com/YangLiangwei/PersonalizationMCP)** — Aggregates Spotify + Reddit + YouTube + others into one server (90+ tools). Direct fit for the recommendations engine. Requires `git clone` + `uv sync` + `personalhub onboarding` + an absolute path to `server.py`.
+- **[bitbonsai/mcp-obsidian](https://github.com/bitbonsai/mcp-obsidian)** — Obsidian vault read/write. Run `claude mcp add obsidian --scope user npx @bitbonsai/mcpvault /path/to/your/vault`.
+- **[getsentry/sentry-mcp](https://github.com/getsentry/sentry-mcp)** — Production error tracking. Easiest path: `claude plugin marketplace add getsentry/sentry-mcp && claude plugin install sentry-mcp@sentry-mcp`. The stdio form requires an additional LLM API key.
+- **[aparajithn/agent-deploy-dashboard-mcp](https://github.com/aparajithn/agent-deploy-dashboard-mcp)** — Vercel/Render/Railway/Fly deploy dashboard. The hosted URL is shared and won't carry your Vercel token, so fork the repo and self-host with `VERCEL_TOKEN` set as an env var on your fork.
 
 ## License
 

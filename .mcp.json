@@ -13,6 +13,45 @@
       "env": {
         "SPOTIFY_CLIENT_ID": "${SPOTIFY_CLIENT_ID}"
       }
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"]
+    },
+    "agent-scraper": {
+      "type": "http",
+      "url": "https://agent-scraper-mcp.onrender.com/mcp"
+    },
+    "neon": {
+      "type": "http",
+      "url": "https://mcp.neon.tech/mcp",
+      "headers": {
+        "Authorization": "Bearer ${NEON_API_KEY}"
+      }
+    },
+    "snowflake": {
+      "command": "uvx",
+      "args": [
+        "snowflake-labs-mcp",
+        "--service-config-file",
+        "./snowflake-tools-config.yaml",
+        "--connection-name",
+        "default"
+      ],
+      "env": {
+        "SNOWFLAKE_ACCOUNT": "${SNOWFLAKE_ACCOUNT}",
+        "SNOWFLAKE_USER": "${SNOWFLAKE_USER}",
+        "SNOWFLAKE_PASSWORD": "${SNOWFLAKE_PASSWORD}",
+        "SNOWFLAKE_ROLE": "${SNOWFLAKE_ROLE}",
+        "SNOWFLAKE_WAREHOUSE": "${SNOWFLAKE_WAREHOUSE}"
+      }
+    },
+    "notion": {
+      "command": "npx",
+      "args": ["-y", "@n24q02m/better-notion-mcp"],
+      "env": {
+        "NOTION_TOKEN": "${NOTION_TOKEN}"
+      }
     }
   }
 }
