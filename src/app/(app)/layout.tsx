@@ -15,6 +15,7 @@ import {
   Globe,
   Sparkles,
   MessageCircle,
+  Dices,
   KeyRound,
 } from "lucide-react";
 import { signOut, useSession } from "@/server/auth/client";
@@ -46,6 +47,7 @@ const appNavItems = [
   { href: "/discover", label: "Discover", icon: Compass },
   { href: "/suggestions", label: "Suggestions", icon: Sparkles },
   { href: "/chat", label: "Chat", icon: MessageCircle },
+  { href: "/coach", label: "Mahjong", icon: Dices },
 ];
 
 const opsNavItems = [
