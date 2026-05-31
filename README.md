@@ -14,6 +14,7 @@ A full-featured web app for vinyl record collectors to research albums, track th
   - Content-based (genre/style/era cosine similarity)
   - Graph traversal (MusicBrainz artist relationships)
   - Collaborative (Discogs community co-ownership)
+- **Mahjong Coach** - Build a Riichi (Japanese mahjong) hand from a tile palette and get instant, offline analysis: exact shanten distance, acceptance (ukeire), and efficiency-ranked discards. An AI coach (Claude/OpenAI) explains *why* a discard is best and answers rules/strategy questions, grounded in the engine's exact numbers.
 - **Import** - Sync your existing Discogs collection and Spotify library
 - **Connected Accounts** - OAuth integration with Discogs (OAuth 1.0a) and Spotify (OAuth 2.0 PKCE)
 

@@ -613,6 +613,32 @@ export const chatMessages = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// mahjong_messages - Multi-turn Mahjong Coach conversation history
+// ---------------------------------------------------------------------------
+export const mahjongMessages = pgTable(
+  "mahjong_messages",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    role: text("role").notNull(), // 'user' | 'assistant'
+    content: text("content").notNull(),
+    // Snapshot of the hand (compact notation) the message was about, if any.
+    hand: text("hand"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .default(sql`now()`),
+  },
+  (table) => [
+    index("mahjong_messages_user_id_idx").on(table.userId),
+    index("mahjong_messages_created_at_idx").on(table.createdAt),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // Inferred types
 // ---------------------------------------------------------------------------
 export type Album = typeof albums.$inferSelect;
@@ -662,6 +688,9 @@ export type NewAiSuggestion = typeof aiSuggestions.$inferInsert;
 
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type NewChatMessage = typeof chatMessages.$inferInsert;
+
+export type MahjongMessage = typeof mahjongMessages.$inferSelect;
+export type NewMahjongMessage = typeof mahjongMessages.$inferInsert;
 
 // ---------------------------------------------------------------------------
 // site_settings - Global configuration (API keys, service credentials)

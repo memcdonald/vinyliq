@@ -11,6 +11,7 @@ import { aiRouter } from './ai';
 import { sourcesRouter } from './sources';
 import { suggestionsRouter } from './suggestions';
 import { chatRouter } from './chat';
+import { mahjongRouter } from './mahjong';
 import { siteConfigRouter } from './site-config';
 
 export const appRouter = createTRPCRouter({
@@ -26,6 +27,7 @@ export const appRouter = createTRPCRouter({
   sources: sourcesRouter,
   suggestions: suggestionsRouter,
   chat: chatRouter,
+  mahjong: mahjongRouter,
   siteConfig: siteConfigRouter,
 });
 
