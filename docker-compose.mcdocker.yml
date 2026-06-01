@@ -1,0 +1,60 @@
+# ---------------------------------------------------------------------------
+# Self-contained deployment for the mcdocker host.
+#
+# This file is intentionally independent of Kong / the reverse proxy: the app
+# is published directly on host port 3000, so it works even when Kong is down.
+# Reach it at  http://<mcdocker-host>:3000
+#
+# Quick start (run on mcdocker, in the repo directory):
+#
+#   1. Make sure .env.local exists with at least:
+#        DATABASE_URL=postgresql://...        (your existing Neon database)
+#        BETTER_AUTH_SECRET=<random secret>   (openssl rand -hex 32)
+#        BETTER_AUTH_URL=http://<mcdocker-host>:3000   (how you reach it)
+#      Optional: ANTHROPIC_API_KEY / OPENAI_API_KEY to enable the AI coach chat.
+#
+#   2. docker compose -f docker-compose.mcdocker.yml up -d --build
+#
+# The `migrate` service runs first and applies any pending database migrations
+# (including the new mahjong_messages table) before the app starts.
+#
+# NOTE: do not run this at the same time as the original docker-compose.yml —
+# both use the container name "vinyliq".
+# ---------------------------------------------------------------------------
+services:
+  # One-shot: apply Drizzle migrations to DATABASE_URL, then exit.
+  migrate:
+    build:
+      context: .
+      target: migrator
+    env_file:
+      - .env.local
+    restart: "no"
+
+  vinyliq:
+    build:
+      context: .
+      target: runner
+    container_name: vinyliq
+    restart: unless-stopped
+    # All config (DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL, API keys)
+    # comes from .env.local so there is a single source of truth. Set
+    # BETTER_AUTH_URL there to the exact origin you load the app from
+    # (e.g. http://mcdocker:3000), or sign-in will fail.
+    env_file:
+      - .env.local
+    ports:
+      - "3000:3000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+    # --- Optional homelab dashboard tile (gethomepage.dev) -------------------
+    # Harmless if you don't run Homepage — other dashboards ignore these.
+    # Uncomment and adjust the href to surface VinylIQ on your dashboard.
+    # labels:
+    #   homepage.group: Apps
+    #   homepage.name: VinylIQ
+    #   homepage.icon: vinyl.png
+    #   homepage.href: http://mcdocker:3000
+    #   homepage.description: Vinyl research + Riichi Mahjong coach

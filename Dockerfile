@@ -11,6 +11,14 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
+# One-shot migrator: applies tracked Drizzle migrations to DATABASE_URL.
+# Reuses the deps stage, which already includes drizzle-kit (a devDependency).
+FROM deps AS migrator
+WORKDIR /app
+COPY drizzle ./drizzle
+COPY drizzle.config.ts ./
+CMD ["npx", "drizzle-kit", "migrate"]
+
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production

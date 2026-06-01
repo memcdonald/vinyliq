@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Search, Library, Heart, Compass } from "lucide-react";
+import { Search, Library, Heart, Compass, Dices } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function HomePage() {
@@ -44,6 +44,12 @@ export default function HomePage() {
             <Compass className="size-4 shrink-0 text-primary" />
             <span>
               Discover new music based on your collection and taste
+            </span>
+          </li>
+          <li className="flex items-center gap-3">
+            <Dices className="size-4 shrink-0 text-primary" />
+            <span>
+              Sharpen your game with the built-in Riichi Mahjong coach
             </span>
           </li>
         </ul>
